@@ -32,12 +32,15 @@ namespace LmpClient.Systems.Warp
         /// </summary>
         private static void FillSubspaceDisplayEntriesNoneSubspace()
         {
+            //Ensure the local player is in the dictionary (may not be if called before CurrentSubspace is set)
+            if (!System.ClientSubspaceList.ContainsKey(SettingsSystem.CurrentSettings.PlayerName))
+                System.ClientSubspaceList.TryAdd(SettingsSystem.CurrentSettings.PlayerName, 0);
+
             if (System.SubspaceEntries.Count != 1 || System.ClientSubspaceList.Keys.Count != System.SubspaceEntries[0].Players.Count)
             {
                 System.SubspaceEntries.Clear();
 
-                var allPlayers = new List<string> { SettingsSystem.CurrentSettings.PlayerName };
-                allPlayers.AddRange(System.ClientSubspaceList.Keys);
+                var allPlayers = System.ClientSubspaceList.Keys.ToList();
                 allPlayers.Sort(PlayerSorter);
 
                 System.SubspaceEntries.Add(new SubspaceDisplayEntry

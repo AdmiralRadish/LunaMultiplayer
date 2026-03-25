@@ -49,7 +49,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="CachedQuickLz, Version=1.3.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\External\Nuget\CachedQuickLz.1.3.1\lib\net46\CachedQuickLz.dll</HintPath>
+      <HintPath>..\External\Nuget\CachedQuickLz.1.3.1\lib\net47\CachedQuickLz.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <HintPath>..\External\KSPLibraries\System.dll</HintPath>

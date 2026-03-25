@@ -17,6 +17,7 @@ TestResults/*
 Config/
 logs/
 Universe/
+*_*.md
 
 LmpClient/*.csproj.user
 LmpCommon/*.csproj.user
