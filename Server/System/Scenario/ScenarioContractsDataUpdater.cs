@@ -1,7 +1,8 @@
 using LmpCommon.Message.Data.ShareProgress;
 using LunaConfigNode.CfgNode;
+using Server.Log;
+using System;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Server.System.Scenario
@@ -15,19 +16,32 @@ namespace Server.System.Scenario
         {
             _ = Task.Run(() =>
             {
-                lock (Semaphore.GetOrAdd("ContractSystem", new object()))
+                try
                 {
-                    if (!ScenarioStoreSystem.CurrentScenarios.TryGetValue("ContractSystem", out var scenario)) return;
-
-                    var scenariosParentNode = scenario.GetNode("CONTRACTS")?.Value;
-                    if (scenariosParentNode == null) return;
-
-                    var existingContracts = scenariosParentNode.GetNodes("CONTRACT").Select(c => c.Value).ToArray();
-                    if (existingContracts.Any())
+                    lock (Semaphore.GetOrAdd("ContractSystem", new object()))
                     {
-                        foreach (var contract in contractsMsg.Contracts.Select(v => new ConfigNode(Encoding.UTF8.GetString(v.Data, 0, v.NumBytes)) { Name = "CONTRACT" }))
+                        if (!ScenarioStoreSystem.CurrentScenarios.TryGetValue("ContractSystem", out var scenario)) return;
+
+                        var scenariosParentNode = scenario.GetNode("CONTRACTS")?.Value;
+                        if (scenariosParentNode == null) return;
+
+                        var existingContracts = scenariosParentNode.GetNodes("CONTRACT").Select(c => c.Value).ToArray();
+
+                        foreach (var contract in contractsMsg.Contracts.Select(v => ParseClientConfigNode(v.Data, v.NumBytes, "CONTRACT")))
                         {
-                            var specificContractNode = existingContracts.FirstOrDefault(n => n.GetValue("guid").Value == contract.GetValue("guid").Value);
+                            var guidVal = contract.GetValue("guid");
+                            if (guidVal == null)
+                            {
+                                LunaLog.Error("Contract update received with no guid — skipping");
+                                continue;
+                            }
+
+                            var specificContractNode = existingContracts.FirstOrDefault(n =>
+                            {
+                                var existing = n.GetValue("guid");
+                                return existing != null && existing.Value == guidVal.Value;
+                            });
+
                             if (specificContractNode != null)
                             {
                                 scenariosParentNode.ReplaceNode(specificContractNode, contract);
@@ -38,6 +52,10 @@ namespace Server.System.Scenario
                             }
                         }
                     }
+                }
+                catch (Exception e)
+                {
+                    LunaLog.Error($"Error updating contract scenario data: {e}");
                 }
             });
         }
