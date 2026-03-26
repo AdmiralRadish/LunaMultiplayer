@@ -36,7 +36,8 @@ namespace LmpClient.Systems.Warp
             if (!System.ClientSubspaceList.ContainsKey(SettingsSystem.CurrentSettings.PlayerName))
                 System.ClientSubspaceList.TryAdd(SettingsSystem.CurrentSettings.PlayerName, 0);
 
-            if (System.SubspaceEntries.Count != 1 || System.ClientSubspaceList.Keys.Count != System.SubspaceEntries[0].Players.Count)
+            var playerCount = System.ClientSubspaceList.Keys.Count;
+            if (System.SubspaceEntries.Count != 1 || playerCount != System.SubspaceEntries[0].Players.Count)
             {
                 System.SubspaceEntries.Clear();
 
