@@ -20,12 +20,21 @@ namespace Server.System
         private static readonly object BackupLock = new object();
 
         /// <summary>
-        /// Returns a scenario in the standard KSP format
+        /// Returns a scenario in the standard KSP ConfigNode format (with { } braces).
+        /// LunaConfigNode stores values at root level (no braces in ToString()),
+        /// but KSP's RecurseFormat on the client requires outer braces to parse correctly.
         /// </summary>
         public static string GetScenarioInConfigNodeFormat(string scenarioName)
         {
-            return CurrentScenarios.TryGetValue(scenarioName, out var scenario) ?
-                scenario.ToString() : null;
+            if (!CurrentScenarios.TryGetValue(scenarioName, out var scenario))
+                return null;
+
+            var raw = scenario.ToString();
+            // Wrap in braces if not already present — KSP client needs them
+            var trimmed = raw.Trim();
+            if (!trimmed.StartsWith("{"))
+                return "{\n" + raw + "\n}";
+            return raw;
         }
 
         /// <summary>
