@@ -36,13 +36,18 @@ namespace Server.System.Scenario
         }
 
         /// <summary>
-        /// Raw updates a scenario in the dictionary
+        /// Raw updates a scenario in the dictionary, stripping outer { } braces
+        /// that KSP's ConfigNode serializer adds (same fix as ParseClientConfigNode).
         /// </summary>
         public static void RawConfigNodeInsertOrUpdate(string scenarioModule, string scenarioAsConfigNode)
         {
             _ = Task.Run(() =>
             {
-                var scenario = new ConfigNode(scenarioAsConfigNode);
+                var trimmed = scenarioAsConfigNode.Trim();
+                if (trimmed.StartsWith("{") && trimmed.EndsWith("}"))
+                    trimmed = trimmed.Substring(1, trimmed.Length - 2);
+
+                var scenario = new ConfigNode(trimmed) { Name = scenarioModule };
                 lock (Semaphore.GetOrAdd(scenarioModule, new object()))
                 {
                     ScenarioStoreSystem.CurrentScenarios.AddOrUpdate(scenarioModule, scenario, (key, existingVal) => scenario);
