@@ -32,3 +32,4 @@ LmpGlobal/*.csproj.user
 
 Server/packages
 LmpClient/GameData/LunaMultiPlayer/Plugins/LmpClient.dll
+rebuildKSP.sh
