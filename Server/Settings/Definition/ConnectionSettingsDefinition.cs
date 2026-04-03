@@ -29,9 +29,9 @@ namespace Server.Settings.Definition
         public int UpnpMsTimeout { get; set; } = 5000;
 
         [XmlComment(Value = "Maximum transmission unit (MTU) size in bytes. Min value is 1. Default value is 1408. Max value is 8192.")]
-        public int MaximumTransmissionUnit { get; set; } = NetPeerConfiguration.kDefaultMTU;
+        public int MaximumTransmissionUnit { get; set; } = 1450;
 
         [XmlComment(Value = "Try to expand MTU size")]
-        public bool AutoExpandMtu { get; set; } = false;
+        public bool AutoExpandMtu { get; set; } = true;
     }
 }

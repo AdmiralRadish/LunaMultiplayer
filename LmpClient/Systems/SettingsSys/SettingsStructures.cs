@@ -24,9 +24,9 @@ namespace LmpClient.Systems.SettingsSys
         public bool RevertEnabled { get; set; }
         public int MaxGroupsPerPlayer { get; set; } = 1;
         public bool IgnoreSyncChecks { get; set; } = false;
-        public int Mtu { get; set; } = NetPeerConfiguration.kDefaultMTU;
+        public int Mtu { get; set; } = 1450;
         public int ChatBuffer { get; set; } = 30;
-        public bool AutoExpandMtu { get; set; } = false;
+        public bool AutoExpandMtu { get; set; } = true;
         public float TimeoutSeconds { get; set; } = 15;
         public ServerFilters ServerFilters { get; set; } = new ServerFilters();
 
