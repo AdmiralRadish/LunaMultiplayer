@@ -64,31 +64,87 @@ namespace LmpClient.VesselUtilities
             var referenceNodeName = node.referenceAttachNode;
             if (string.IsNullOrEmpty(referenceNodeName)) return null;
 
+            // Method 1: Direct attach node lookup
             var attachNode = node.part.FindAttachNode(referenceNodeName);
-            if (attachNode?.attachedPart == null) return null;
-
-            var otherDockingNodes = attachNode.attachedPart.FindModulesImplementing<ModuleDockingNode>();
-            if (otherDockingNodes == null || otherDockingNodes.Count == 0) return null;
-
-            // Find the specific docking node on the other part that connects back to us
-            foreach (var other in otherDockingNodes)
+            if (attachNode?.attachedPart != null)
             {
-                if (string.IsNullOrEmpty(other.referenceAttachNode)) continue;
-                var otherAttach = other.part.FindAttachNode(other.referenceAttachNode);
-                if (otherAttach?.attachedPart == node.part)
-                    return other;
+                var otherDockingNodes = attachNode.attachedPart.FindModulesImplementing<ModuleDockingNode>();
+                if (otherDockingNodes != null && otherDockingNodes.Count > 0)
+                {
+                    foreach (var other in otherDockingNodes)
+                    {
+                        if (string.IsNullOrEmpty(other.referenceAttachNode)) continue;
+                        var otherAttach = other.part.FindAttachNode(other.referenceAttachNode);
+                        if (otherAttach?.attachedPart == node.part)
+                            return other;
+                    }
+                    return otherDockingNodes[0];
+                }
+            }
+
+            // Method 2: Parent/child walk for docking connections.
+            // When two ports dock, one becomes a child of the other.
+            // The docking attachment goes through the referenceAttachNode (top),
+            // while regular ship connections go through bottom or srfAttach.
+
+            if (node.part.parent != null)
+            {
+                var parentDocks = node.part.parent.FindModulesImplementing<ModuleDockingNode>();
+                if (parentDocks != null && parentDocks.Count > 0
+                    && !IsBottomOrSurfaceAttachedTo(node.part, node.part.parent))
+                {
+                    return parentDocks[0];
+                }
+            }
+
+            if (node.part.children != null)
+            {
+                foreach (var child in node.part.children)
+                {
+                    if (child == null) continue;
+                    var childDocks = child.FindModulesImplementing<ModuleDockingNode>();
+                    if (childDocks != null && childDocks.Count > 0
+                        && !IsBottomOrSurfaceAttachedTo(child, node.part))
+                    {
+                        return childDocks[0];
+                    }
+                }
             }
 
             return null;
         }
 
+        private static bool IsBottomOrSurfaceAttachedTo(Part part, Part other)
+        {
+            if (part.srfAttachNode != null && part.srfAttachNode.attachedPart == other)
+                return true;
+            var bottomNode = part.FindAttachNode("bottom");
+            if (bottomNode != null && bottomNode.attachedPart == other)
+                return true;
+            return false;
+        }
+
         /// <summary>
-        /// Find the partner ModuleDockingNode by searching all loaded vessels for a part
-        /// matching the given dockedPartUId.
+        /// Find the partner ModuleDockingNode by searching for a part matching
+        /// the given dockedPartUId.  When <paramref name="sameVesselOnly"/> is
+        /// provided, only that vessel's parts are searched — this prevents
+        /// stale cross-vessel references (left over after undock) from causing
+        /// false-positive recovery.
         /// </summary>
-        public static ModuleDockingNode FindPartnerByUId(uint dockedPartUId)
+        public static ModuleDockingNode FindPartnerByUId(uint dockedPartUId, Vessel sameVesselOnly = null)
         {
             if (dockedPartUId == 0) return null;
+
+            if (sameVesselOnly != null)
+            {
+                if (sameVesselOnly.parts == null) return null;
+                foreach (var part in sameVesselOnly.parts)
+                {
+                    if (part.flightID == dockedPartUId)
+                        return part.FindModulesImplementing<ModuleDockingNode>()?.FirstOrDefault();
+                }
+                return null;
+            }
 
             foreach (var vessel in FlightGlobals.VesselsLoaded)
             {
@@ -277,8 +333,58 @@ namespace LmpClient.VesselUtilities
             {
                 if (node?.fsm == null) continue;
 
-                // Already in a valid docked state — nothing to fix
-                if (IsInDockedState(node)) continue;
+                // Some broken ports are stuck in a docked FSM state even though
+                // they have no physical partner (ghost "Undock" button).
+                // Validate docked states before skipping.
+                if (IsInDockedState(node))
+                {
+                    var dockedPartner = FindPartnerFromPartTree(node);
+
+                    if (dockedPartner != null)
+                    {
+                        if (node.otherNode != dockedPartner)
+                        {
+                            LunaLog.Log($"[LMP]: Setting otherNode on {vessel.vesselName}" +
+                                $" part {node.part?.partName}({node.part?.flightID})" +
+                                $" -> partner {dockedPartner.part?.partName}({dockedPartner.part?.flightID})");
+                            node.otherNode = dockedPartner;
+                        }
+                        if (dockedPartner.otherNode != node)
+                        {
+                            LunaLog.Log($"[LMP]: Setting otherNode on {vessel.vesselName}" +
+                                $" part {dockedPartner.part?.partName}({dockedPartner.part?.flightID})" +
+                                $" -> partner {node.part?.partName}({node.part?.flightID})");
+                            dockedPartner.otherNode = node;
+                        }
+                        if (dockedPartner.part != null && node.dockedPartUId != dockedPartner.part.flightID)
+                        {
+                            LunaLog.Log($"[LMP]: Fixing dockedPartUId on {node.part?.partName}" +
+                                $"({node.part?.flightID}): {node.dockedPartUId} -> {dockedPartner.part.flightID}");
+                            node.dockedPartUId = dockedPartner.part.flightID;
+                        }
+                        if (node.part != null && dockedPartner.dockedPartUId != node.part.flightID)
+                        {
+                            LunaLog.Log($"[LMP]: Fixing dockedPartUId on {dockedPartner.part?.partName}" +
+                                $"({dockedPartner.part?.flightID}): {dockedPartner.dockedPartUId} -> {node.part.flightID}");
+                            dockedPartner.dockedPartUId = node.part.flightID;
+                        }
+                    }
+                    else
+                    {
+                        LunaLog.Log($"[LMP]: Clearing ghost docked state on {vessel.vesselName}" +
+                            $" part {node.part?.partName}" +
+                            $" (flightID {node.part?.flightID})" +
+                            $" fsm='{node.fsm.currentStateName}'" +
+                            $" serialized='{node.state}'" +
+                            $" dockedUId={node.dockedPartUId}");
+                        node.otherNode = null;
+                        node.dockedPartUId = 0;
+                        node.state = "Ready";
+                        node.fsm.StartFSM("Ready");
+                    }
+
+                    continue;
+                }
 
                 var fsmState = node.fsm.currentStateName;
                 var serializedState = node.state;
@@ -292,14 +398,23 @@ namespace LmpClient.VesselUtilities
                     // Serialized state says docked — find partner
                     partner = FindPartnerFromPartTree(node);
                     if (partner == null && node.dockedPartUId != 0)
-                        partner = FindPartnerByUId(node.dockedPartUId);
+                    {
+                        var byUid = FindPartnerByUId(node.dockedPartUId, vessel);
+                        // Validate: UID partner must be tree-connected back to us
+                        if (byUid != null && FindPartnerFromPartTree(byUid) == node)
+                            partner = byUid;
+                    }
                 }
                 else if (node.dockedPartUId != 0)
                 {
                     // Has partner UID — find partner
                     partner = FindPartnerFromPartTree(node);
                     if (partner == null)
-                        partner = FindPartnerByUId(node.dockedPartUId);
+                    {
+                        var byUid = FindPartnerByUId(node.dockedPartUId, vessel);
+                        if (byUid != null && FindPartnerFromPartTree(byUid) == node)
+                            partner = byUid;
+                    }
                 }
 
                 // Case 3: All metadata lost — walk the part tree
@@ -317,6 +432,21 @@ namespace LmpClient.VesselUtilities
                     continue;
                 }
 
+                // Stale cross-vessel reference: dockedPartUId points to a part
+                // on another vessel (left over from a previous undock).  Clean
+                // it up so the port is fully available for re-docking.
+                if (node.dockedPartUId != 0 && FindPartnerByUId(node.dockedPartUId) != null)
+                {
+                    LunaLog.Log($"[LMP]: Clearing stale cross-vessel dockedPartUId={node.dockedPartUId}" +
+                        $" on {vessel.vesselName} part {node.part?.partName}" +
+                        $" (flightID {node.part?.flightID})");
+                    node.dockedPartUId = 0;
+                    node.otherNode = null;
+                    if (fsmState != "Ready")
+                        node.fsm.StartFSM("Ready");
+                    continue;
+                }
+
                 // Case 4: Stuck in transient state with no partner anywhere — reset to Ready
                 if (IsInRecoverableTransientState(node))
                 {
@@ -324,6 +454,19 @@ namespace LmpClient.VesselUtilities
                         $"with no partner on {vessel.vesselName} part {node.part?.partName} " +
                         $"(flightID {node.part?.flightID}) — resetting to Ready");
                     node.fsm.StartFSM("Ready");
+                    continue;
+                }
+
+                // Clean stale metadata: no valid partner found but port has
+                // leftover dockUId/otherNode from a previous docking.
+                if (node.dockedPartUId != 0 || node.otherNode != null)
+                {
+                    LunaLog.Log($"[LMP]: Cleaning stale metadata on {vessel.vesselName}" +
+                        $" part {node.part?.partName} (flightID {node.part?.flightID})" +
+                        $" fsm='{fsmState}' dockedUId={node.dockedPartUId}" +
+                        $" otherNode={(node.otherNode != null ? node.otherNode.part?.flightID.ToString() : "null")}");
+                    node.dockedPartUId = 0;
+                    node.otherNode = null;
                 }
             }
         }
