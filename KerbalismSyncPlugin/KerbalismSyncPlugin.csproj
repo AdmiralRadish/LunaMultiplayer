@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>KerbalismSyncPlugin</RootNamespace>
+    <AssemblyName>KerbalismSyncPlugin</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!--
+    Reference the Server project to get access to:
+      - Server.Plugin.LmpPlugin (base class)
+      - Server.Client.ClientStructure
+      - Server.Server.MessageQueuer
+      - Server.Context.ServerContext
+      - Server.Log.LunaLog
+      - All LmpCommon types compiled into Server.dll (ModMsgData, ModSrvMsg, etc.)
+    Private=false prevents copying Server's dependencies to our plugin output;
+    they are already loaded in the server process at runtime.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Server\Server.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>
