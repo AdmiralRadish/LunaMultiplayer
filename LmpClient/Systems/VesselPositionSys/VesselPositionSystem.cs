@@ -86,6 +86,7 @@ namespace LmpClient.Systems.VesselPositionSys
 
             CurrentVesselUpdate.Clear();
             TargetVesselUpdateQueue.Clear();
+            VesselPositionMessageSender.ClearAllOrbitHistory();
         }
 
         private void HandleVesselUpdates()
@@ -203,6 +204,7 @@ namespace LmpClient.Systems.VesselPositionSys
         {
             CurrentVesselUpdate.TryRemove(vesselId, out _);
             TargetVesselUpdateQueue.TryRemove(vesselId, out _);
+            VesselPositionMessageSender.ClearVesselOrbitHistory(vesselId);
         }
 
         /// <summary>

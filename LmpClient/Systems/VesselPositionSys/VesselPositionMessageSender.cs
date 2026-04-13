@@ -9,12 +9,96 @@ using LmpCommon.Message.Client;
 using LmpCommon.Message.Data.Vessel;
 using LmpCommon.Message.Interface;
 using System;
+using System.Collections.Concurrent;
 using UnityEngine;
 
 namespace LmpClient.Systems.VesselPositionSys
 {
     public class VesselPositionMessageSender : SubSystem<VesselPositionSystem>, IMessageSender
     {
+        #region Spurious orbit-capture detection
+
+        // Tracks (bodyIndex, gameTime) of the last position update sent per vessel, used to detect
+        // anomalous SOI transitions caused by KSP PatchedConic precision errors during vessel load.
+        private static readonly ConcurrentDictionary<Guid, (int BodyIndex, double GameTime)> LastKnownOrbitState =
+            new ConcurrentDictionary<Guid, (int BodyIndex, double GameTime)>();
+
+        // Vessels currently under suppression: value is the game-time at which the suspicion was raised.
+        private static readonly ConcurrentDictionary<Guid, double> SpuriousCaptureSuspectedAt =
+            new ConcurrentDictionary<Guid, double>();
+
+        // A SOI transition is only flagged when this many game-seconds elapsed since the last known
+        // update.  Continuous flight produces small deltas; a vessel loaded from an old server epoch
+        // produces a large delta.
+        private const double SpuriousCaptureMinTimeJump = 300.0;
+
+        // After flagging, position updates for the vessel are suppressed for this many game-seconds
+        // to give the operator time to notice and intervene before wrong data reaches the server.
+        private const double SpuriousCaptureSettleTime = 60.0;
+
+        /// <summary>
+        /// Checks whether the orbital state in <paramref name="msgData"/> represents a plausible
+        /// continuous-flight update.  Returns <c>false</c> and logs a warning when a captured
+        /// elliptical orbit (ECC &lt; 1) appears in a new reference body after a large game-time
+        /// gap — the signature of a KSP PatchedConic precision error on vessel load or time warp.
+        /// </summary>
+        private static bool ValidateOrbitPlausibility(Guid vesselId, string vesselName, VesselPositionMsgData msgData)
+        {
+            int    newBodyIndex    = (int)msgData.Orbit[7];
+            double newEcc          = msgData.Orbit[1];
+            double currentGameTime = msgData.GameTime;
+
+            // If this vessel was previously flagged, keep suppressing until the settle window elapses.
+            if (SpuriousCaptureSuspectedAt.TryGetValue(vesselId, out double suspectedAt))
+            {
+                if (currentGameTime - suspectedAt < SpuriousCaptureSettleTime)
+                    return false;
+
+                // Settle window elapsed — clear the flag and allow through (log if still spurious-looking).
+                SpuriousCaptureSuspectedAt.TryRemove(vesselId, out _);
+            }
+
+            if (LastKnownOrbitState.TryGetValue(vesselId, out var last))
+            {
+                double gameTimeDelta = currentGameTime - last.GameTime;
+
+                if (last.BodyIndex != newBodyIndex && newEcc < 1.0 && gameTimeDelta > SpuriousCaptureMinTimeJump)
+                {
+                    LunaLog.LogWarning(
+                        $"[LMP]: SPURIOUS ORBIT CAPTURE DETECTED for '{vesselName}' ({vesselId}): " +
+                        $"SOI transition body-index {last.BodyIndex} → {newBodyIndex}, " +
+                        $"ECC={newEcc:F4}, game-time step={gameTimeDelta:F0}s " +
+                        $"(threshold={SpuriousCaptureMinTimeJump}s). " +
+                        "A captured elliptical orbit appeared without a continuous burn sequence — " +
+                        "likely a KSP PatchedConic precision error on vessel load or time warp. " +
+                        $"Position updates suppressed for {SpuriousCaptureSettleTime}s of game-time. " +
+                        "If this vessel genuinely performed an orbit insertion, this warning is a false positive.");
+
+                    SpuriousCaptureSuspectedAt[vesselId] = currentGameTime;
+                    return false;
+                }
+            }
+
+            LastKnownOrbitState[vesselId] = (newBodyIndex, currentGameTime);
+            return true;
+        }
+
+        /// <summary>Remove tracking state for a vessel (call when the vessel is removed from the scene).</summary>
+        public static void ClearVesselOrbitHistory(Guid vesselId)
+        {
+            LastKnownOrbitState.TryRemove(vesselId, out _);
+            SpuriousCaptureSuspectedAt.TryRemove(vesselId, out _);
+        }
+
+        /// <summary>Remove tracking state for ALL vessels (call on system disable / scene unload).</summary>
+        public static void ClearAllOrbitHistory()
+        {
+            LastKnownOrbitState.Clear();
+            SpuriousCaptureSuspectedAt.Clear();
+        }
+
+        #endregion
+
         public void SendMessage(IMessageData msg)
         {
             NetworkSender.QueueOutgoingMessage(MessageFactory.CreateNew<VesselCliMsg>(msg));
@@ -74,6 +158,9 @@ namespace LmpClient.Systems.VesselPositionSys
                 if (MainSystem.BodiesGees.TryGetValue(vessel.mainBody, out var bodyGee))
                     msgData.HackingGravity = Math.Abs(bodyGee - vessel.mainBody.GeeASL) > 0.0001;
                 msgData.HackingGravity = false;
+
+                if (!ValidateOrbitPlausibility(vessel.id, vessel.vesselName, msgData))
+                    return null;
 
                 return msgData;
             }

@@ -34,6 +34,8 @@ namespace Server.Message
                     HandleVesselRemove(client, messageData);
                     break;
                 case VesselMessageType.Position:
+                    if (VesselDataUpdater.IsSpuriousCapture(messageData as VesselPositionMsgData, client.PlayerName))
+                        break;
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     if (client.Subspace == WarpContext.LatestSubspace.Id)
                         VesselDataUpdater.WritePositionDataToFile(messageData);
@@ -95,6 +97,7 @@ namespace Server.Message
                 LunaLog.Debug($"Removing vessel {data.VesselId} from {client.PlayerName}");
                 VesselStoreSystem.RemoveVessel(data.VesselId);
             }
+            VesselDataUpdater.ClearSpuriousCaptureFlag(data.VesselId);
 
             if (data.AddToKillList)
                 VesselContext.RemovedVessels.Add(data.VesselId);
