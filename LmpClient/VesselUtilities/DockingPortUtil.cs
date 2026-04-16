@@ -38,7 +38,7 @@ namespace LmpClient.VesselUtilities
         {
             if (node?.fsm == null) return false;
             var state = node.fsm.currentStateName;
-            return !string.IsNullOrEmpty(state) && DockedStates.Any(s => state == s);
+            return !string.IsNullOrEmpty(state) && DockedStates.Contains(state);
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace LmpClient.VesselUtilities
         {
             if (node?.fsm == null) return false;
             var state = node.fsm.currentStateName;
-            return !string.IsNullOrEmpty(state) && RecoverableTransientStates.Any(s => state == s);
+            return !string.IsNullOrEmpty(state) && RecoverableTransientStates.Contains(state);
         }
 
         /// <summary>
@@ -389,37 +389,15 @@ namespace LmpClient.VesselUtilities
                 var fsmState = node.fsm.currentStateName;
                 var serializedState = node.state;
 
-                // Try to find the partner through multiple methods
-                ModuleDockingNode partner = null;
-
-                // Case 1 & 2: We have data pointing to a partner
-                if (!string.IsNullOrEmpty(serializedState) && DockedStates.Any(s => serializedState == s))
+                // Part tree is ground truth for physical connections.
+                // Fall back to dockedPartUId with tree validation.
+                var partner = FindPartnerFromPartTree(node);
+                if (partner == null && node.dockedPartUId != 0)
                 {
-                    // Serialized state says docked — find partner
-                    partner = FindPartnerFromPartTree(node);
-                    if (partner == null && node.dockedPartUId != 0)
-                    {
-                        var byUid = FindPartnerByUId(node.dockedPartUId, vessel);
-                        // Validate: UID partner must be tree-connected back to us
-                        if (byUid != null && FindPartnerFromPartTree(byUid) == node)
-                            partner = byUid;
-                    }
+                    var byUid = FindPartnerByUId(node.dockedPartUId, vessel);
+                    if (byUid != null && FindPartnerFromPartTree(byUid) == node)
+                        partner = byUid;
                 }
-                else if (node.dockedPartUId != 0)
-                {
-                    // Has partner UID — find partner
-                    partner = FindPartnerFromPartTree(node);
-                    if (partner == null)
-                    {
-                        var byUid = FindPartnerByUId(node.dockedPartUId, vessel);
-                        if (byUid != null && FindPartnerFromPartTree(byUid) == node)
-                            partner = byUid;
-                    }
-                }
-
-                // Case 3: All metadata lost — walk the part tree
-                if (partner == null)
-                    partner = FindPartnerFromPartTree(node);
 
                 // If we found a partner, recover both sides together
                 if (partner != null)
