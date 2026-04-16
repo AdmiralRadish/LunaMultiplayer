@@ -33,20 +33,25 @@ namespace LmpClient.Harmony
     }
 
     /// <summary>
-    /// Blocks the Tracking Station "Recover" button when AllowVesselTermination is false on the server.
-    /// Recovery from the Tracking Station permanently removes a vessel from the universe.
+    /// Blocks the Tracking Station "Recover" button when AllowVesselTermination is false on the server,
+    /// unless the vessel is recoverable (landed or splashed on the home body). Recoverable vessels are
+    /// allowed through so players can still recover missions that have safely returned home.
     /// </summary>
     [HarmonyPatch(typeof(SpaceTracking))]
     [HarmonyPatch("BtnOnclick_RecoverSelectedVessel")]
     public class SpaceTracking_RecoverSelectedVessel
     {
         [HarmonyPrefix]
-        private static bool PrefixRecoverSelectedVessel()
+        private static bool PrefixRecoverSelectedVessel(SpaceTracking __instance)
         {
             if (MainSystem.NetworkState < ClientState.Connected) return true;
 
             if (!SettingsSystem.ServerSettings.AllowVesselTermination)
             {
+                // Allow recovery of vessels that are landed/splashed on the home body
+                if (__instance.SelectedVessel != null && __instance.SelectedVessel.IsRecoverable)
+                    return true;
+
                 LunaScreenMsg.PostScreenMessage(LocalizationContainer.ScreenText.TerminationDisabledByServer, 5f, ScreenMessageStyle.UPPER_CENTER);
                 return false;
             }
