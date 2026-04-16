@@ -18,6 +18,7 @@ Config/
 logs/
 Universe/
 *_*.md
+GameData/
 
 LmpClient/*.csproj.user
 LmpCommon/*.csproj.user
