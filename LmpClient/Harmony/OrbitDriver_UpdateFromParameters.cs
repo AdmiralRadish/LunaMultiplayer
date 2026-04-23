@@ -66,7 +66,7 @@ namespace LmpClient.Harmony
             {
                 if (VesselPositionSystem.Singleton.VesselHavePositionUpdatesQueued(driver.vessel.id))
                 {
-                    //DO NOT update the vessel position here. The VesselPositioningSystem takes care of that
+                    //DO NOT update the vessel position here. The VesselPositioningSystem takes care of that.
                     return;
                 }
                 else
