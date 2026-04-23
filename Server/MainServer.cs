@@ -112,6 +112,9 @@ namespace Server
                 LunaLog.Normal($"Luna Server version: {LmpVersioning.CurrentVersion} ({AppContext.BaseDirectory})");
                 LunaLog.Normal($"Server Data Directory: {ServerContext.DataDirectory}");
 
+                // Truncate the craft create/remove audit file so each server run starts with a clean log.
+                CraftCreationAndRemovalLog.Initialize();
+
                 Universe.CheckUniverse();
                 LoadSettingsAndGroups();
                 VesselStoreSystem.LoadExistingVessels();
