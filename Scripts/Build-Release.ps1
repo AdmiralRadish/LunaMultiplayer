@@ -1,24 +1,29 @@
 <#
 .SYNOPSIS
-    Builds the four Luna Multiplayer release zip artifacts locally, matching
-    the asset shape of the 0.29.0 stable GitHub release.
+    Builds the Luna Multiplayer release zip artifacts locally - the four
+    stable-release zips plus a self-contained linux-x64 Server zip per
+    configuration.
 
 .DESCRIPTION
-    Produces the same four zips that a stable LMP release ships:
+    Produces the stable LMP release zips plus a self-contained linux-x64
+    Server zip per configuration:
         LunaMultiplayer-Client-Debug.zip
         LunaMultiplayer-Client-Release.zip
-        LunaMultiplayer-Server-Debug.zip
-        LunaMultiplayer-Server-Release.zip
+        LunaMultiplayer-Server-Debug.zip                 (framework-dependent, "any" RID)
+        LunaMultiplayer-Server-Release.zip               (framework-dependent, "any" RID)
+        LunaMultiplayer-Server-linux-x64-Debug.zip       (self-contained, trimmed)
+        LunaMultiplayer-Server-linux-x64-Release.zip     (self-contained, trimmed)
 
-    The Server zip is the framework-dependent ("any" RID) publish - portable
-    across Windows and Linux as long as the .NET 6 runtime is installed on the
-    host - mirroring the small (~2 MB) Server zip on the 0.29.0 release.
+    The portable "any" Server zip is small (~2 MB) and requires the .NET 6
+    runtime on the host (Windows or Linux). The linux-x64 Server zip bundles
+    the runtime so a Linux host needs no .NET install - matching the
+    linux-x64 artifact shipped by AppVeyor's nightly pipeline.
 
-    AppVeyor's nightly pipeline (appveyor.yml) produces a wider 12-zip set
-    (per-RID Server self-contained builds + a MasterServer zip); this script
-    intentionally narrows to the four-zip stable-release shape so a developer
-    can assemble a stable release locally without sifting through nightly
-    artifacts.
+    AppVeyor's nightly pipeline (appveyor.yml) produces an even wider set
+    (additional per-RID Server self-contained builds + a MasterServer zip);
+    this script narrows to the stable-release shape plus the linux-x64
+    self-contained server so a developer can assemble a stable release
+    locally without sifting through nightly artifacts.
 
 .PARAMETER Configuration
     Build configuration to produce. 'All' (default) builds both Debug and
@@ -37,15 +42,26 @@
     Skip the LmpClient build/stage/zip steps. (Server zips will still build.)
 
 .PARAMETER SkipServer
-    Skip the Server publish/zip step. (Client zips will still build.)
+    Skip the Server publish/zip step. (Client zips will still build.) Also
+    skips the linux-x64 self-contained Server build.
+
+.PARAMETER SkipLinuxServer
+    Skip only the linux-x64 self-contained Server publish/zip step. The
+    portable ("any" RID) Server zip is still produced.
 
 .EXAMPLE
     .\Scripts\Build-Release.ps1
-    Produces all four zips (Client+Server, Debug+Release) into .\release_files\.
+    Produces all six zips (Client+Server portable+Server linux-x64, Debug+Release)
+    into .\release_files\.
 
 .EXAMPLE
     .\Scripts\Build-Release.ps1 -Configuration Release
-    Produces only the two Release zips (Client + Server).
+    Produces only the three Release zips (Client + Server portable + Server linux-x64).
+
+.EXAMPLE
+    .\Scripts\Build-Release.ps1 -SkipLinuxServer
+    Produces only the four "stable release" zips, skipping the self-contained
+    linux-x64 Server builds.
 #>
 
 [CmdletBinding()]
@@ -57,7 +73,8 @@ param(
 
     [switch]$NoClean,
     [switch]$SkipClient,
-    [switch]$SkipServer
+    [switch]$SkipServer,
+    [switch]$SkipLinuxServer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -303,19 +320,36 @@ try {
         }
 
         if (-not $SkipServer) {
-            # Single framework-dependent Server publish (matches the 0.29.0
-            # stable release's "Server-<cfg>.zip" shape: portable across
-            # Windows and Linux as long as .NET 6 is installed on the host).
-            # Self-contained per-RID builds are intentionally NOT produced;
-            # those are an AppVeyor-nightly concern, not a stable-release one.
-            Write-Section "Publish Server ($cfg, framework-dependent)"
             $serverProj = Join-Path $RepoRoot 'Server\Server.csproj'
+
+            # Framework-dependent Server publish (matches the 0.29.0 stable
+            # release's "Server-<cfg>.zip" shape: portable across Windows and
+            # Linux as long as .NET 6 is installed on the host).
+            Write-Section "Publish Server ($cfg, framework-dependent)"
             $publishOut = Join-Path $stage 'LMPServer'
             Invoke-External $dotnet 'publish' $serverProj `
                 '--configuration' $cfg `
                 '--output' $publishOut `
                 '--self-contained' 'false' `
                 '-p:PublishSingleFile=false'
+
+            if (-not $SkipLinuxServer) {
+                # Self-contained linux-x64 Server publish (mirrors the
+                # linux-x64 artifact produced by AppVeyor's nightly pipeline -
+                # bundles the .NET 6 runtime so the host does not need .NET
+                # installed). Flags match appveyor.yml: --os linux,
+                # --self-contained true, PublishSingleFile=false, and
+                # PublishTrimmed=true to keep the zip size reasonable.
+                Write-Section "Publish Server ($cfg, linux-x64 self-contained)"
+                $linuxPublishOut = Join-Path $stage 'LMPServer-linux-x64'
+                Invoke-External $dotnet 'publish' $serverProj `
+                    '--configuration' $cfg `
+                    '--output' $linuxPublishOut `
+                    '--os' 'linux' `
+                    '--self-contained' 'true' `
+                    '-p:PublishSingleFile=false' `
+                    '-p:PublishTrimmed=true'
+            }
         }
 
         Write-Section "Package zip artifacts ($cfg)"
@@ -333,6 +367,18 @@ try {
             Remove-Item $serverZip -Force -ErrorAction SilentlyContinue
             Invoke-External $sevenZip 'a' '-bd' '-mx=7' $serverZip `
                 $readme (Join-Path $stage 'LMPServer')
+
+            if (-not $SkipLinuxServer) {
+                # The self-contained publish folder is renamed to "LMPServer"
+                # inside the zip so the extracted layout matches the portable
+                # zip (same top-level directory name). 7-Zip preserves the
+                # source directory's basename, so stage the rename by zipping
+                # the folder itself.
+                $linuxServerZip = Join-Path $OutputDir "LunaMultiplayer-Server-linux-x64-$cfg.zip"
+                Remove-Item $linuxServerZip -Force -ErrorAction SilentlyContinue
+                Invoke-External $sevenZip 'a' '-bd' '-mx=7' $linuxServerZip `
+                    $readme (Join-Path $stage 'LMPServer-linux-x64')
+            }
         }
     }
 
