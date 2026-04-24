@@ -1,70 +1,63 @@
 <#
 .SYNOPSIS
-    Builds the Luna Multiplayer release zip artifacts locally, mirroring the
-    AppVeyor pipeline (appveyor.yml) that produces the assets attached to a
-    GitHub release (e.g. the 0.29.0 / 0.29.1 release zips).
+    Builds the four Luna Multiplayer release zip artifacts locally, matching
+    the asset shape of the 0.29.0 stable GitHub release.
 
 .DESCRIPTION
-    Replicates the before_build / build / after_build / artifacts sections of
-    the AppVeyor configuration on a developer workstation. Output zips are
-    written to the directory passed to -OutputDir (default: <repo>\release_files,
-    which is gitignored).
+    Produces the same four zips that a stable LMP release ships:
+        LunaMultiplayer-Client-Debug.zip
+        LunaMultiplayer-Client-Release.zip
+        LunaMultiplayer-Server-Debug.zip
+        LunaMultiplayer-Server-Release.zip
 
-    Produced zips per configuration (matching appveyor.yml):
-        LunaMultiplayer-Client-<cfg>.zip
-        LunaMultiplayer-Server-win-x64-<cfg>.zip
-        LunaMultiplayer-Server-linux-x64-<cfg>.zip
-        LunaMultiplayer-Server-linux-arm64-<cfg>.zip
-        LunaMultiplayer-Server-linux-arm32-<cfg>.zip
-        LunaMultiplayer-Server-any-<cfg>.zip
-        LunaMultiplayerMasterServer-<cfg>.zip
+    The Server zip is the framework-dependent ("any" RID) publish - portable
+    across Windows and Linux as long as the .NET 6 runtime is installed on the
+    host - mirroring the small (~2 MB) Server zip on the 0.29.0 release.
 
-    Historically the 0.29.0 GitHub release shipped only the platform-agnostic
-    Client-Release.zip and Server-Release.zip pair. Today's pipeline produces
-    the wider set above; this script publishes the same set so a 0.29.1 stable
-    release can be assembled from the local output without waiting on
-    AppVeyor.
+    AppVeyor's nightly pipeline (appveyor.yml) produces a wider 12-zip set
+    (per-RID Server self-contained builds + a MasterServer zip); this script
+    intentionally narrows to the four-zip stable-release shape so a developer
+    can assemble a stable release locally without sifting through nightly
+    artifacts.
 
 .PARAMETER Configuration
-    Build configuration to produce. 'Release', 'Debug', or 'All' (both).
-    Defaults to 'Release'.
+    Build configuration to produce. 'All' (default) builds both Debug and
+    Release - i.e. all four zips. Pass 'Debug' or 'Release' to build only that
+    config's pair (one Client zip + one Server zip).
 
 .PARAMETER OutputDir
     Destination directory for the final zip artifacts. Defaults to
     <repo>\release_files (gitignored).
 
 .PARAMETER NoClean
-    Skip wiping the FinalFiles staging directory before building.
+    Skip wiping the FinalFiles staging directory and the legacy-project obj/
+    folders before building.
 
 .PARAMETER SkipClient
-    Skip the LmpClient build/stage/zip steps.
+    Skip the LmpClient build/stage/zip steps. (Server zips will still build.)
 
 .PARAMETER SkipServer
-    Skip the per-RID Server publish/zip steps.
-
-.PARAMETER SkipMasterServer
-    Skip the MasterServer publish/zip step.
+    Skip the Server publish/zip step. (Client zips will still build.)
 
 .EXAMPLE
     .\Scripts\Build-Release.ps1
-    Produces only the Release-config zips into .\release_files\.
+    Produces all four zips (Client+Server, Debug+Release) into .\release_files\.
 
 .EXAMPLE
-    .\Scripts\Build-Release.ps1 -Configuration All
-    Produces Debug and Release zips into .\release_files\.
+    .\Scripts\Build-Release.ps1 -Configuration Release
+    Produces only the two Release zips (Client + Server).
 #>
 
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release', 'All')]
-    [string]$Configuration = 'Release',
+    [string]$Configuration = 'All',
 
     [string]$OutputDir,
 
     [switch]$NoClean,
     [switch]$SkipClient,
-    [switch]$SkipServer,
-    [switch]$SkipMasterServer
+    [switch]$SkipServer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -309,41 +302,20 @@ try {
                 Copy-Item -Destination (Join-Path $clientStage 'Flags') -Force
         }
 
-        if (-not $SkipMasterServer) {
-            Write-Section "Publish MasterServer ($cfg, linux, framework-dependent)"
-            Invoke-External $dotnet 'publish' `
-                (Join-Path $RepoRoot 'MasterServer\MasterServer.csproj') `
+        if (-not $SkipServer) {
+            # Single framework-dependent Server publish (matches the 0.29.0
+            # stable release's "Server-<cfg>.zip" shape: portable across
+            # Windows and Linux as long as .NET 6 is installed on the host).
+            # Self-contained per-RID builds are intentionally NOT produced;
+            # those are an AppVeyor-nightly concern, not a stable-release one.
+            Write-Section "Publish Server ($cfg, framework-dependent)"
+            $serverProj = Join-Path $RepoRoot 'Server\Server.csproj'
+            $publishOut = Join-Path $stage 'LMPServer'
+            Invoke-External $dotnet 'publish' $serverProj `
                 '--configuration' $cfg `
-                '--output' (Join-Path $stage 'LMPMasterServer') `
-                '--os' 'linux' `
+                '--output' $publishOut `
                 '--self-contained' 'false' `
                 '-p:PublishSingleFile=false'
-        }
-
-        if (-not $SkipServer) {
-            $serverProj = Join-Path $RepoRoot 'Server\Server.csproj'
-            $serverRids = @(
-                @{ Tag = 'win-x64';     ZipName = 'win-x64';     OsArgs = @('--os','win');                    SelfContained = 'true';  PublishTrimmed = 'true'  },
-                @{ Tag = 'linux-x64';   ZipName = 'linux-x64';   OsArgs = @('--os','linux');                  SelfContained = 'true';  PublishTrimmed = 'true'  },
-                @{ Tag = 'linux-arm64'; ZipName = 'linux-arm64'; OsArgs = @('--os','linux','--arch','arm64'); SelfContained = 'true';  PublishTrimmed = 'true'  },
-                @{ Tag = 'linux-arm';   ZipName = 'linux-arm32'; OsArgs = @('--os','linux','--arch','arm');   SelfContained = 'true';  PublishTrimmed = 'true'  },
-                @{ Tag = 'any';         ZipName = 'any';         OsArgs = @();                                SelfContained = 'false'; PublishTrimmed = 'false' }
-            )
-
-            foreach ($rid in $serverRids) {
-                Write-Section "Publish Server ($cfg, $($rid.Tag))"
-                $publishOut = Join-Path $finalRoot ("{0}-{1}\LMPServer" -f $rid.Tag, $cfg)
-                $publishArgs = @(
-                    'publish', $serverProj,
-                    '--configuration', $cfg,
-                    '--output', $publishOut
-                ) + $rid.OsArgs + @(
-                    '--self-contained', $rid.SelfContained,
-                    '-p:PublishSingleFile=false',
-                    "-p:PublishTrimmed=$($rid.PublishTrimmed)"
-                )
-                Invoke-External $dotnet @publishArgs
-            }
         }
 
         Write-Section "Package zip artifacts ($cfg)"
@@ -357,24 +329,10 @@ try {
         }
 
         if (-not $SkipServer) {
-            $serverZipMap = @(
-                @{ Zip = "LunaMultiplayer-Server-win-x64-$cfg.zip";     Src = Join-Path $finalRoot "win-x64-$cfg\LMPServer"     },
-                @{ Zip = "LunaMultiplayer-Server-linux-x64-$cfg.zip";   Src = Join-Path $finalRoot "linux-x64-$cfg\LMPServer"   },
-                @{ Zip = "LunaMultiplayer-Server-linux-arm64-$cfg.zip"; Src = Join-Path $finalRoot "linux-arm64-$cfg\LMPServer" },
-                @{ Zip = "LunaMultiplayer-Server-linux-arm32-$cfg.zip"; Src = Join-Path $finalRoot "linux-arm-$cfg\LMPServer"   },
-                @{ Zip = "LunaMultiplayer-Server-any-$cfg.zip";         Src = Join-Path $finalRoot "any-$cfg\LMPServer"         }
-            )
-            foreach ($entry in $serverZipMap) {
-                $dest = Join-Path $OutputDir $entry.Zip
-                Remove-Item $dest -Force -ErrorAction SilentlyContinue
-                Invoke-External $sevenZip 'a' '-bd' '-mx=7' $dest $readme $entry.Src
-            }
-        }
-
-        if (-not $SkipMasterServer) {
-            $msZip = Join-Path $OutputDir "LunaMultiplayerMasterServer-$cfg.zip"
-            Remove-Item $msZip -Force -ErrorAction SilentlyContinue
-            Invoke-External $sevenZip 'a' '-bd' '-mx=7' $msZip (Join-Path $stage 'LMPMasterServer')
+            $serverZip = Join-Path $OutputDir "LunaMultiplayer-Server-$cfg.zip"
+            Remove-Item $serverZip -Force -ErrorAction SilentlyContinue
+            Invoke-External $sevenZip 'a' '-bd' '-mx=7' $serverZip `
+                $readme (Join-Path $stage 'LMPServer')
         }
     }
 
