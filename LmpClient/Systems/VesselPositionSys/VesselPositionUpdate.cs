@@ -249,21 +249,25 @@ namespace LmpClient.Systems.VesselPositionSys
                 return (orbit.getObtAtUT(TimeSyncSystem.UniversalTime) - orbit.getObtAtUT(TimeSyncSystem.UniversalTime - timeDiff)) * orbit.meanMotion;
             }
 
-            return 0;
-        }
+                    /// <summary>
+                    /// Returns the epoch for the target interpolation state. Always use the epoch value sent from the server.
+                    /// Recalculating based on Planetarium.GetUniversalTime() causes massive orbit shifts on deep-space
+                    /// trajectories, especially long-coast missions where epoch age can be years old.
+                    /// Mean anomaly adjustments for subspace time are handled separately via GetMeanAnomalyFixFactor().
+                    /// </summary>
+                    private double CalculateTargetEpochTime(double targetEpoch)
+                    {
+                        return targetEpoch;
+                    }
 
-        /// <summary>
-        /// Here we adjust the LAN according to the time of the subspace where the player send the message.
-        /// If we don't do this, then the orbit will be shifted in the longitude axis as your planet might be more
-        /// advanced in time so your planet rotations will not match
-        /// </summary>
-        private static double GetLanFixFactor(double timestamp, int subspaceId, Vessel vessel, CelestialBody body)
-        {
-            //If the vessel is in orbit we return 0 as we want to see the vessel IN THE FUTURE. This makes the behaviour closer to what KSP in single player does
-            if (vessel && vessel.situation >= Vessel.Situations.ORBITING)
-                return 0;
-
-            //If the vessel is in atmosphere, we must show the REAL position of the vessel as if we use the projection, the vessel might be inside kerbin
+                    /// <summary>
+                    /// Returns the epoch for the current interpolation state. Always use the epoch value sent from the server.
+                    /// Recalculating based on Planetarium.GetUniversalTime() causes massive orbit shifts.
+                    /// </summary>
+                    private double CalculateEpochTime(double currentEpoch)
+                    {
+                        return currentEpoch;
+                    }
             //if we are in a different subspace
             if (body.SiderealDayLength() > 0)
             {
