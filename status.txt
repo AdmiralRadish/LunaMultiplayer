@@ -1,0 +1,21 @@
+On branch fix/undock-catchall-guard
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   LmpClient/Harmony/Part_Undock.cs
+	modified:   LmpClient/LmpClient.csproj
+	modified:   LmpClient/Systems/TimeSync/TimeSyncEvents.cs
+	modified:   LmpClient/Systems/TimeSync/TimeSyncSystem.cs
+	modified:   LmpClient/Systems/VesselUndockSys/VesselUndock.cs
+	modified:   LmpClient/VesselUtilities/DockingPortUtil.cs
+	modified:   Server/System/Vessel/VesselPositionDataUpdater.cs
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	LmpClient/Harmony/ModuleDockingNode_Undock.cs
+	LmpClient/Harmony/ModuleDockingNode_UndockSameVessel.cs
+	branches.txt
+	log.txt
+	status.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

@@ -1,0 +1,13 @@
+diff --git a/LmpClient/Systems/TimeSync/TimeSyncEvents.cs b/LmpClient/Systems/TimeSync/TimeSyncEvents.cs
+index 502c4c05..01b2af39 100644
+--- a/LmpClient/Systems/TimeSync/TimeSyncEvents.cs
++++ b/LmpClient/Systems/TimeSync/TimeSyncEvents.cs
+@@ -9,7 +9,7 @@ public class TimeSyncEvents : SubSystem<TimeSyncSystem>
+         /// </summary>
+         public void OnStartSpectating()
+         {
+-            System.ForceTimeSync();
++            System.ForceTimeSync(true);
+         }
+     }
+ }

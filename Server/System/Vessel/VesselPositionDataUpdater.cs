@@ -52,6 +52,7 @@ namespace Server.System.Vessel
             int    newRef         = (int)msgData.Orbit[7];
             double newEcc         = msgData.Orbit[1];
             double newGameTime    = msgData.GameTime;  // Orbit[6] is epoch/EPH; GameTime is current UT
+            double newEpoch       = msgData.Orbit[6];
 
             // If vessel is already flagged, keep rejecting until settle window elapses.
             if (ServerSpuriousCaptureFlaggedAt.TryGetValue(msgData.VesselId, out double flaggedAt))
@@ -76,13 +77,18 @@ namespace Server.System.Vessel
                 return false;
 
             double gameTimeDelta = newGameTime - storedEph;
+            double incomingEpochDelta = newGameTime - newEpoch;
 
-            if (storedRef != newRef && newEcc < 1.0 && gameTimeDelta > ServerSpuriousCaptureMinTimeJump)
+            if (storedRef != newRef &&
+                newEcc < 1.0 &&
+                gameTimeDelta > ServerSpuriousCaptureMinTimeJump &&
+                incomingEpochDelta > ServerSpuriousCaptureMinTimeJump)
             {
                 LunaLog.Warning(
                     $"[SpuriousCapture] Vessel {msgData.VesselId} from {playerName}: " +
                     $"SOI REF {storedRef} → {newRef}, ECC={newEcc:F4}, " +
-                    $"game-time jump={gameTimeDelta:F0}s (threshold={ServerSpuriousCaptureMinTimeJump}s). " +
+                    $"game-time jump={gameTimeDelta:F0}s, incoming epoch delta={incomingEpochDelta:F0}s " +
+                    $"(threshold={ServerSpuriousCaptureMinTimeJump}s). " +
                     $"Likely KSP PatchedConic error on vessel load/warp. " +
                     $"Position update REJECTED for {ServerSpuriousCaptureSettleTime}s game-time. " +
                     "Server orbit state preserved. If this vessel genuinely performed an orbit " +
