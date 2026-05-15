@@ -1,0 +1,194 @@
+f0361816 fix/timesync: Reduce orbital phase drift on vessel switch and spurious SOI capture false positives
+167943aa fix/undock: Add catch-all guard for invalid undock FSM states
+b47c28ff Fix the master server statuses in README.md
+235049d5 Merge pull request #663 from BraveCaperCat2/fix/listen-address
+be404289 Merge pull request #664 from ShiralynDev/master
+e8a5b251 Merge pull request #665 from ShiralynDev/build-lmp-linux
+a6e08e9f Merge pull request #668 from ShiralynDev/patch
+ecc85df3 Merge pull request #638 from AdmiralRadish/fix/scenario-confignode-parsing
+b4651ef9 Merge pull request #666 from ShiralynDev/swedish
+422852f7 Merge pull request #669 from ShiralynDev/timewarp-fix
+fa83c812 Limit timewarp to 1x on WarpMode.None
+eac36f28 Swedish translations
+e3a9ecfd Avoid explicit refresh
+e9d41264 Linux build script
+327fcc55 Fix incorrect example
+c4561480 Consistent error messages
+ee1d6395 Share command splitting logic
+ee3e7f9f allow "" in command parameters
+558b5bc1 Remove webhook from yml
+2b7c7747 Restore bodyname field to fix build
+6edc83f9 Improve error handling
+cb6938a3 Merge pull request #658 from BraveCaperCat2/master
+765851ec Update the runtime checker to the version from Release/0.29.1, remove .NET 6 hardcoding
+6568aaf2 Add the runtime checker from Release/0.29.1 to master
+ceadc957 Working on vessel position system v1
+e50e828e Merge branch 'master' of https://github.com/LunaMultiplayer/LunaMultiplayer
+dbab939d Stronger retry for Ip location and added GeoIp2
+71a7baa1 Merge pull request #637 from AdmiralRadish/feat/maneuver-node-sync
+7275a141 Merge pull request #635 from AdmiralRadish/fix/sanitize-persistent-ids
+526189b0 Merge pull request #632 from AdmiralRadish/fix/vessel-update-reference-transform
+cba7c103 Merge pull request #630 from AdmiralRadish/fix/flightstate-callback-removal
+3f3fe7d9 Merge pull request #627 from AdmiralRadish/fix/safety-bubble-nre
+398ae53e Merge pull request #639 from AdmiralRadish/fix/docking-port-fsm-validation
+a003a4d1 Merge pull request #649 from AdmiralRadish/fix/throttle-zero-on-lock
+4bca707c Update LunaConfigNode
+36157f6d Merge pull request #656 from Fierce-Cat/main
+344c8763 fix: VesselMsgReader truncation in Synchronization
+95e89ff4 Update appveyor.yml token
+b5d46714 Small adjustment to RefreshOwnCrafts (fixing merge)
+5e047e78 Added a default name and description warning when the server starts, to try to encourage people to change their name/description
+2a902fdc Merge branch 'master' of https://github.com/LunaMultiplayer/LunaMultiplayer
+fe8af8cd Fixed the ship upload system to only display entries for .craft files, instead of showing two entries per ship due to meta files.
+e2ec3c01 Merge pull request #652 from BraveCaperCat2/master
+fff56616 Update the images for the .NET install instructions
+1826fd81 Fixing up solution files
+ea2f281b Update README.md
+d0c17c9a Updating MAJOR, MINOR, PATH in LunaMultiplayer.version
+ff6adf02 Trigger build
+9af3eaeb Trigger build
+3feebe48 Merge branch 'master' into fix/throttle-zero-on-lock
+5ecd4bea Merge pull request #650 from LunaMultiplayer/DrewBanyai/More_Contract_Work_And_Orbit_SOI_Fix
+006ccb5e Fix contract disappearance, CC load exceptions, and SOI spam for LMP-managed vessels
+3ba64449 Only trigger Discord notification for master builds
+5415cce7 Fix throttle spike: remove FlyByWire callback before zeroing throttle on lock acquire
+c3f74b4c Zero throttle when acquiring vessel control lock
+617a673c ci: trigger rebuild
+e6414cea Merge pull request #625 from AdmiralRadish/fix/nan-orbit-no-server-delete
+1403cd28 Merge pull request #648 from LunaMultiplayer/DrewBanyai/Fix_Clickthrough_Blocker_Popup
+f1e71722 Fixed the Click-Through-Blocker showing up every time you connect to a server
+813a86ec Merge pull request #631 from AdmiralRadish/feat/send-batching-flightstate-delta
+d49346ec Merge pull request #626 from AdmiralRadish/fix/warp-display-player-list
+92b0f992 Merge pull request #628 from AdmiralRadish/fix/vessel-position-interpolation
+8e630f5c Merge pull request #629 from AdmiralRadish/fix/disconnect-send-order
+bcec1b6d Merge pull request #634 from AdmiralRadish/fix/resource-allowlist-relaxation
+bd4f8b27 Merge pull request #633 from AdmiralRadish/fix/throttle-zero-on-lock
+5d8f0605 Merge pull request #640 from AdmiralRadish/feat/send-batching
+565b6dd8 Merge pull request #647 from LunaMultiplayer/DrewBanyai/Batching_Server_Message_Queue
+b0253d44 Remove deleted packages.config from Dockerfile_MasterServer COPY step
+d4a7b067 Batched the server message queue instead of sending 1 message for each event
+93c28e1c Merge pull request #646 from LunaMultiplayer/DrewBanyai/Time_Warp_And_Sync_Fixes
+83baf44e Merge pull request #645 from LunaMultiplayer/DrewBanyai/Career_Contract_Sync_Fix
+5a033274 Merge branch 'master' of https://github.com/LunaMultiplayer/LunaMultiplayer into DrewBanyai/Career_Contract_Sync_Fix
+5ae78fa5 Some fixes for the time warp to run extra sanity checks for if a server has warped to a ludicrous number of years forward
+ec0d5c59 More updates to the way Contracts work, which may resolve the issue of Contract Lock players preventing other players from seeing Available contracts entirely
+90d8046c Sanitize persistent IDs before vessel load to prevent freezes
+cedcdfa4 Merge pull request #600 from Matszwe02/bugfix/exp_parts
+0d3f883a Merge pull request #644 from LunaMultiplayer/DrewBanyai/Resolving_Vessel_Exceptions
+fd467f71 Merge pull request #643 from LunaMultiplayer/DrewBanyai/Adding_Release_And_Debug_Arguments_To_Build_Script
+d9391646 Adding more safeguards to stop null reference exceptions in loading or updating vessels
+777ee9d3 Added Debug and Release arguments to the build script to allow for only building one of the two, optionally
+5ad2f40e Remove Server Plugin
+919512ff Merge pull request #641 from LunaMultiplayer/DrewBanyai/Adjusting_Missing_Flag_Debug_To_One_Message_Per_Ship
+f0d8a87a Lowered the number of Debug messages per ship to 1 for missing flags instead of N (the number of parts with the flag)
+00d160f7 Fix: Validate docking port FSM state before processing undocking
+89fc3d82 Batch network sends and reduce flush overhead
+5cfb77b7 Cleanup pass on DockingPortUtil: .Contains() and simplified partner search
+0fb53563 Fix scenario ConfigNode parsing and add error handling
+5f899de0 Sync maneuver nodes between players
+da62af4e Relax resource allowlist check to warn instead of block
+83f835c8 Zero throttle when acquiring vessel control lock
+b3fe19ea Guard referenceTransformId overwrite on active vessel
+1b22668d AllowVesselTermination: allow recovery of landed/splashed vessels on home body
+a5722c3b Reduce network overhead: batch message sending and suppress duplicate flight states
+b47c0754 Fix: TryRemoveCallback condition was inverted, never actually removed
+6bb056ff Fix: send scenario modules before disconnecting, not after
+1b5fc45b Fix: vessel position interpolation ΓÇö use rb directly, fix stale rotation offset
+2e47ce90 Fix: null-guard SafetyBubble launch site iteration for modded planet packs
+2eeb1d05 Fix: warp display missing local player and duplicate entries
+be16d1c3 Fix: NaN orbit no longer permanently deletes vessel from server
+7f5d8da3 Fix: add SpaceTracking_DeleteVessel.cs to csproj Compile items
+f1327419 Fix vessel position interpolation: use rb.position/rb.rotation for unpacked parts, fix stale rotation offset
+fff2cf3c Merge pull request #624 from LunaMultiplayer/DrewBanyai/Fulfilling_Dedicated_Server_Addition_PR_041526
+71fdedc8 Removed all inactive dedicated servers
+feeee844 Removed all inactive servers from Dedicated Servers List, added any active servers from open PRs, which will now be closed.
+7468a62c Merge branch 'DrewBanyai/Career_Contract_Sync_Fix' of https://github.com/LunaMultiplayer/LunaMultiplayer into DrewBanyai/Career_Contract_Sync_Fix
+5e75975b Added extra logging for ContractsLoaded states, + reconciling finished contracts.
+b1ad4cd0 Career Contract synchronization fix
+c70cd7e7 Merge pull request #563 from ABritInSpace/patch-1
+2e4a403d Merge branch 'master' into patch-1
+5ae51417 Merge pull request #596 from ABritInSpace/patch-2
+19e827fe Added extra logging for ContractsLoaded states, + reconciling finished contracts.
+adac759a Career Contract synchronization fix
+09a7327f Merge pull request #623 from LunaMultiplayer/DrewBanyai/KSPATH_Default_Means_No_Secondary_Build
+13e3be9d Changes the build script so that if there is no KSPPATH specified, it won't assume one at C:/KSP
+a3f9a201 Merge pull request #622 from DrewBanyai/Deferred_Updates_From_Vessel_Sync
+970bcc56 Merge branch 'master' of https://github.com/DrewBanyai/LunaMultiplayer into Deferred_Updates_From_Vessel_Sync
+d9fba0ac Added a deferred update/save after a vessel syncs so that 100 vessels will produce 1 update/save instead of 100 in rapid succession
+4011a0c5 Merge pull request #621 from BraveCaperCat2/master
+185484c6 Rename ISSUE_TEMPLATE.md to BugReportTemplate.md
+bb56e715 Rewrite the github issue template to use the new format.
+6cac3285 Add AllowVesselTermination server setting - blocks Tracking Station delete/recover buttons when false
+2037005d Merge pull request #620 from LunaMultiplayer/dependabot/nuget/uhttpsharp/log4net-3.3.0
+d4d17900 Remove stale log4net direct dependency from LmpMasterServer
+7207dc69 Remove stale log4net direct dependency from LmpMasterServer
+8398319c Bump log4net from 2.0.12 to 3.3.0
+89b52215 Merge pull request #1 from LunaMultiplayer/master
+0ed81edd Update README.md
+49762ec3 Update README.md
+b4891414 Merge pull request #619 from DrewBanyai/master
+cc633253 Fixing a potential race condition on chat message handler, where multiple messages sent in quick succession could cause a disconnection / exception
+c984f878 Merge upstream/master ΓÇö CI/build updates (appveyor dotnet publish, devcontainer, Dockerfile_Server)
+d5e91299 Added ContractSystem_OnLoad to csproj file for LmpClient
+971eb744 Merge pull request #11 from DrewBanyai/v_0_29_1_Final_Tweaks
+00dad39e Various fixes for Contract loading, management, player locks, and unknown mod part support.
+61d39d13 ManeuverNode sync, persistentId collision fix, spurious SOI capture guard
+4d8778a7 Merge pull request #618 from xVemu/patch-1
+a20ab0a8 Update dotnet publish command for self-contained build
+1c19e2c0 Update appveyor.yml
+3216be48 Merge pull request #617 from LunaMultiplayer/fix-ci-dotnet10
+29190e4b Added a deactivation of ships that are being added to the destruction queue, as that does not happen immediately and components can still be processed in the meantime in unexpected ways.
+2d9e241b Thread-safety addition for RemovedVessels collection (O(n) -> O(1) as well!)
+aea5531c Build without trimming which is broken since .NET 8
+4f37ae48 Fix CI build with .NET 10
+167f97de Update devcontainer base image
+444ea84c Added a flag to make the search for external dependency files recursive to properly pull in the latest Harmony DLL files, for example
+27028c80 Updated to Harmony Mod 2.2.1
+08bf966c Updated the Handshake system to have an output reason string instead of a single Mutatable string that could cause race conditions
+24def8ac Fixed the InternalGetMessageSize within VesselUpdateMsgData, which didn't have the sizing data for the Com[3] float values included
+38a5047e Updated the Orbit.IDENT to be set during controlled flight and therefore properly saved to Vessel text file
+4ef10e39 Reversing extra position data messages on the client, as the issue was actually server-side.
+1d74f12f Updated position event to occur right when taking control of a ship and to update the Body name in the vessel ORBIT data
+3487452e Added IsCompatibleWithPeer check to allow us to specify versions that will, in the future once everyone is on 0.29.1 or higher, be allowed to co-mingle (for example, 0.30.0)
+674d5875 Downgrading version to 0.29.1 to avoid incompatibility in messaging (until we fix the IsCompatible system to allow version mismatch with specific version groups
+a9a65028 Replaced Common.PlatformIsWindows() with OperatingSystem.IsWindows() in MainServer
+58856917 Added LmpVersion to ClientStructure
+39e6607b Added a single script to build LmpClient, Server, and MasterServer debug and release builds all at once
+433d505e Upgraded all version markers in cs and yaml files from 0.29.0. to 0.30.0 in preparation for a new version release
+db45697d Merge pull request #615 from DrewBanyai/master
+900e5e49 Fixed up testing around parallelization
+b850c980 Added extra checks for missing resource in protoparts to prevent crashing back to main menu
+773c1511 Fixed region code discovery during build/test
+1ed5407a Docker: switch SDK stage to mcr.microsoft.com/dotnet/sdk:10.0-alpine
+ddf35df1 Updated the NetRuntime pngs to Dotnet 10
+a793fa0d First pass upgrade from Dotnet 9 to Dotnet 10
+708dc415 Remove PublishTrimmed for NETSDK1124 support
+12370ec4 Fix Docker NETSDK1083: use linux-musl RIDs for .NET 9 Alpine builds
+44c85109 Further updates to dotnet 9 upgrade for testing, plus one Async function fix
+f6e8537d Fixing the HttpClient change to only be in server communication, not within the .net 4.7 code where it is invalid
+59b0fc51 Fixed another point where we were synchronously waiting on a task return instead of using asynchronous await
+19bde1ce Upgraded to more modern calls for NetAESEncryption functionality and NetRandom as well
+bd5343eb Replaced synchronous locking code with asynchronous fire-and-forget replacements
+669d0edb Switchout out a synchronously blocking Cancel() call with CancelAsync()
+2a32f3a0 - Added more support for the split build between net9 and net4.7 - Added type forwarding to avoid warnings/errors in trying to find proper types - Upgrading from deprecated package Open.NAT to Mono.NAT and WebRequest.Create to modern HttpClient
+9ac3af68 Adding support for socket errors so that if they occur, we get clear output about what happened instead of an exception output with very little data
+e111b82e Architectural migration to .NET 9.0 and binary-sharing model
+3f342b34 Kerbalism Sync v1
+e3af8079 Merge feat/network-throughput-quantization into main
+f3c37cc9 nonprod build
+a55c5801 Merge pull request #614 from DrewBanyai/master
+69e9a16d New LMP branch for hifi networking
+07ca533d Fix client scenarios
+5a79a9bd Server fixes v2
+3dbd8620 Server Bracket Fix
+b3526f96 Fix Scenario Issues
+2121dd29 Ready for server build
+3e1f0ade Fixes for CTB and docking
+167036d4 Update gitignore
+94304513 Merge branch 'master' of https://github.com/LunaMultiplayer/LunaMultiplayer
+c20949e7 Fixed reference
+8cf30da9 Merge pull request #6 from DrewBanyai/Feature/Asynchronous_Disk_IO_Operations
+480c9276 Refactor core systems to use asynchronous disk I/O - Offloaded heavy disk I/O operations (file reading, writing, and serialization) in UniverseConverter, CraftLibrarySystem, and ScreenshotSystem to background threads using Task.Run(). - Implemented SemaphoreSlim in each system to guarantee thread safety and prevent race conditions or file access conflicts. - Updated collections (OwnCrafts in CraftLibrary, FoldersWithNewContent in ScreenshotSystem) to use thread-safe creation patterns and ConcurrentBag to prevent InvalidOperationException during Unity UI rendering. - Updated OptionsDrawer UI to call GenerateUniverse as a fire-and-forget task.
+cb693363 bugfix: Remove experimental parts after contract is completed
+8d848c18 Update DedicatedServersList.txt
+8c4af63e Update DedicatedServersList.txt
