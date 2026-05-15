@@ -1,0 +1,15 @@
+ceadc957 Working on vessel position system v1
+5415cce7 Fix throttle spike: remove FlyByWire callback before zeroing throttle on lock acquire
+5ad2f40e Remove Server Plugin
+5cfb77b7 Cleanup pass on DockingPortUtil: .Contains() and simplified partner search
+1b22668d AllowVesselTermination: allow recovery of landed/splashed vessels on home body
+7f5d8da3 Fix: add SpaceTracking_DeleteVessel.cs to csproj Compile items
+f1327419 Fix vessel position interpolation: use rb.position/rb.rotation for unpacked parts, fix stale rotation offset
+6cac3285 Add AllowVesselTermination server setting - blocks Tracking Station delete/recover buttons when false
+61d39d13 ManeuverNode sync, persistentId collision fix, spurious SOI capture guard
+3f342b34 Kerbalism Sync v1
+e3af8079 Merge feat/network-throughput-quantization into main
+f3c37cc9 nonprod build
+69e9a16d New LMP branch for hifi networking
+07ca533d Fix client scenarios
+5a79a9bd Server fixes v2

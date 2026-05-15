@@ -49,7 +49,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="CachedQuickLz, Version=1.3.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\External\Nuget\CachedQuickLz.1.3.1\lib\net46\CachedQuickLz.dll</HintPath>
+      <HintPath>..\External\Nuget\CachedQuickLz.1.3.1\lib\net47\CachedQuickLz.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <HintPath>..\External\KSPLibraries\System.dll</HintPath>
@@ -168,6 +168,8 @@
     <Compile Include="Harmony\EVAConstructionModeEditor_AttachPart.cs" />
     <Compile Include="Harmony\EVAConstructionModeEditor_DropAttachablePart.cs" />
     <Compile Include="Harmony\ModuleDockingNode_DockToVessel.cs" />
+    <Compile Include="Harmony\ModuleDockingNode_Undock.cs" />
+    <Compile Include="Harmony\ModuleDockingNode_UndockSameVessel.cs" />
     <Compile Include="Harmony\ContractSystem_OnAwake.cs" />
     <Compile Include="Harmony\FlightDriver_SetStartupNewVessel.cs" />
     <Compile Include="Harmony\FlightDriver_Start.cs" />
@@ -193,6 +195,7 @@
     <Compile Include="Harmony\ScenarioDiscoverableObjects_SpawnAsteroid.cs" />
     <Compile Include="Harmony\ScenarioDiscoverableObjects_SpawnComet.cs" />
     <Compile Include="Harmony\ScenarioDiscoverableObjects_UpdateSpaceObjects.cs" />
+    <Compile Include="Harmony\ScenarioNewGameIntro_OnLoad.cs" />
     <Compile Include="Harmony\ShipConstruction_AssembleForLaunch.cs" />
     <Compile Include="Harmony\SpaceTracking_StopTrackingObject.cs" />
     <Compile Include="Harmony\SpaceTracking_StartTrackingObject.cs" />
@@ -223,6 +226,7 @@
     <Compile Include="Harmony\QuickSaveLoad_QuickLoad.cs" />
     <Compile Include="Harmony\ProtoCrewMember_Die.cs" />
     <Compile Include="Harmony\ShipConstruction_FindVesselsLandedAt.cs" />
+    <Compile Include="Harmony\SpaceTracking_DeleteVessel.cs" />
     <Compile Include="Harmony\SpaceTracking_FlyVessel.cs" />
     <Compile Include="Harmony\SpaceTracking_SetVessel.cs" />
     <Compile Include="Harmony\Strategy_CanBeActivated.cs" />
@@ -438,6 +442,7 @@
     <Compile Include="Systems\VesselUpdateSys\VesselUpdateMessageHandler.cs" />
     <Compile Include="Systems\VesselUpdateSys\VesselUpdateMessageSender.cs" />
     <Compile Include="Systems\VesselUpdateSys\VesselUpdateSystem.cs" />
+    <Compile Include="VesselUtilities\DockingPortUtil.cs" />
     <Compile Include="VesselUtilities\OwnVesselReloader.cs" />
     <Compile Include="VesselUtilities\VesselSerializer.cs" />
     <Compile Include="Systems\VesselSwitcherSys\VesselSwitcherSystem.cs" />

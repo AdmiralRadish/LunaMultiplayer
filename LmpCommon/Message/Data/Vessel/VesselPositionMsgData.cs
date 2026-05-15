@@ -1,11 +1,29 @@
 ﻿using Lidgren.Network;
 using LmpCommon.Message.Base;
 using LmpCommon.Message.Types;
+using System;
 
 namespace LmpCommon.Message.Data.Vessel
 {
     public class VesselPositionMsgData : VesselBaseMsgData
     {
+        private const int BodyIndexMax = 2048;
+        private const int BodyAngleBits = 21;
+        private const int BodyNormalBits = 14;
+        private const int RotationBits = 15;
+        private const int OrbitAngleBits = 20;
+        private const int OrbitEccentricityBits = 20;
+
+        [Flags]
+        private enum PositionFlags : byte
+        {
+            None = 0,
+            Landed = 1 << 0,
+            Splashed = 1 << 1,
+            HackingGravity = 1 << 2,
+            HasBodyName = 1 << 3,
+        }
+
         /// <inheritdoc />
         internal VesselPositionMsgData() { }
         public override VesselMessageType VesselMessageType => VesselMessageType.Position;
@@ -31,67 +49,111 @@ namespace LmpCommon.Message.Data.Vessel
         {
             base.InternalSerialize(lidgrenMsg);
 
-            lidgrenMsg.Write(BodyIndex);
+            var flags = BuildFlags();
+
+            lidgrenMsg.WriteRangedInteger(0, BodyIndexMax, Math.Max(0, Math.Min(BodyIndexMax, BodyIndex)));
             lidgrenMsg.Write(SubspaceId);
             lidgrenMsg.Write(PingSec);
             lidgrenMsg.Write(HeightFromTerrain);
-            lidgrenMsg.Write(Landed);
-            lidgrenMsg.Write(Splashed);
-            lidgrenMsg.Write(HackingGravity);
+            lidgrenMsg.Write((byte)flags);
+
+            lidgrenMsg.WriteRangedSingle((float)Math.Max(-90d, Math.Min(90d, LatLonAlt[0])), -90f, 90f, BodyAngleBits);
+            lidgrenMsg.WriteRangedSingle((float)Math.Max(-180d, Math.Min(180d, LatLonAlt[1])), -180f, 180f, BodyAngleBits);
+            lidgrenMsg.Write((float)LatLonAlt[2]);
 
             for (var i = 0; i < 3; i++)
-                lidgrenMsg.Write(LatLonAlt[i]);
+                lidgrenMsg.Write((float)VelocityVector[i]);
 
             for (var i = 0; i < 3; i++)
-                lidgrenMsg.Write(VelocityVector[i]);
-
-            for (var i = 0; i < 3; i++)
-                lidgrenMsg.Write(NormalVector[i]);
+                lidgrenMsg.WriteSignedSingle(ClampToSignedUnit((float)NormalVector[i]), BodyNormalBits);
 
             for (var i = 0; i < 4; i++)
-                lidgrenMsg.Write(SrfRelRotation[i]);
+                lidgrenMsg.WriteSignedSingle(ClampToSignedUnit(SrfRelRotation[i]), RotationBits);
 
-            for (var i = 0; i < 8; i++)
-                lidgrenMsg.Write(Orbit[i]);
+            lidgrenMsg.WriteRangedSingle((float)Math.Max(0d, Math.Min(180d, Orbit[0])), 0f, 180f, OrbitAngleBits);
+            lidgrenMsg.WriteRangedSingle((float)Math.Max(0d, Math.Min(16d, Orbit[1])), 0f, 16f, OrbitEccentricityBits);
+            lidgrenMsg.Write(Orbit[2]);
+            lidgrenMsg.WriteRangedSingle(WrapAngleDegrees(Orbit[3]), 0f, 360f, OrbitAngleBits);
+            lidgrenMsg.WriteRangedSingle(WrapAngleDegrees(Orbit[4]), 0f, 360f, OrbitAngleBits);
+            lidgrenMsg.WriteRangedSingle((float)Math.Max(-360d, Math.Min(360d, Orbit[5])), -360f, 360f, OrbitAngleBits);
+            lidgrenMsg.Write(Orbit[6]);
+            lidgrenMsg.WriteRangedInteger(0, BodyIndexMax, Math.Max(0, Math.Min(BodyIndexMax, (int)Math.Round(Orbit[7]))));
 
-            lidgrenMsg.Write(BodyName);
+            lidgrenMsg.WritePadBits();
+            if (flags.HasFlag(PositionFlags.HasBodyName))
+                lidgrenMsg.Write(BodyName);
         }
 
         internal override void InternalDeserialize(NetIncomingMessage lidgrenMsg)
         {
             base.InternalDeserialize(lidgrenMsg);
 
-            BodyIndex = lidgrenMsg.ReadInt32();
+            BodyIndex = lidgrenMsg.ReadRangedInteger(0, BodyIndexMax);
             SubspaceId = lidgrenMsg.ReadInt32();
             PingSec = lidgrenMsg.ReadFloat();
             HeightFromTerrain = lidgrenMsg.ReadFloat();
-            Landed = lidgrenMsg.ReadBoolean();
-            Splashed = lidgrenMsg.ReadBoolean();
-            HackingGravity = lidgrenMsg.ReadBoolean();
+
+            var flags = (PositionFlags)lidgrenMsg.ReadByte();
+            Landed = flags.HasFlag(PositionFlags.Landed);
+            Splashed = flags.HasFlag(PositionFlags.Splashed);
+            HackingGravity = flags.HasFlag(PositionFlags.HackingGravity);
+
+            LatLonAlt[0] = lidgrenMsg.ReadRangedSingle(-90f, 90f, BodyAngleBits);
+            LatLonAlt[1] = lidgrenMsg.ReadRangedSingle(-180f, 180f, BodyAngleBits);
+            LatLonAlt[2] = lidgrenMsg.ReadFloat();
 
             for (var i = 0; i < 3; i++)
-                LatLonAlt[i] = lidgrenMsg.ReadDouble();
+                VelocityVector[i] = lidgrenMsg.ReadFloat();
 
             for (var i = 0; i < 3; i++)
-                VelocityVector[i] = lidgrenMsg.ReadDouble();
-
-            for (var i = 0; i < 3; i++)
-                NormalVector[i] = lidgrenMsg.ReadDouble();
+                NormalVector[i] = lidgrenMsg.ReadSignedSingle(BodyNormalBits);
 
             for (var i = 0; i < 4; i++)
-                SrfRelRotation[i] = lidgrenMsg.ReadFloat();
+                SrfRelRotation[i] = lidgrenMsg.ReadSignedSingle(RotationBits);
 
-            for (var i = 0; i < 8; i++)
-                Orbit[i] = lidgrenMsg.ReadDouble();
+            Orbit[0] = lidgrenMsg.ReadRangedSingle(0f, 180f, OrbitAngleBits);
+            Orbit[1] = lidgrenMsg.ReadRangedSingle(0f, 16f, OrbitEccentricityBits);
+            Orbit[2] = lidgrenMsg.ReadDouble();
+            Orbit[3] = lidgrenMsg.ReadRangedSingle(0f, 360f, OrbitAngleBits);
+            Orbit[4] = lidgrenMsg.ReadRangedSingle(0f, 360f, OrbitAngleBits);
+            Orbit[5] = lidgrenMsg.ReadRangedSingle(-360f, 360f, OrbitAngleBits);
+            Orbit[6] = lidgrenMsg.ReadDouble();
+            Orbit[7] = lidgrenMsg.ReadRangedInteger(0, BodyIndexMax);
 
-            if (lidgrenMsg.Position < lidgrenMsg.LengthBits)
+            lidgrenMsg.SkipPadBits();
+            if (flags.HasFlag(PositionFlags.HasBodyName) && lidgrenMsg.Position < lidgrenMsg.LengthBits)
                 BodyName = lidgrenMsg.ReadString();
+            else
+                BodyName = string.Empty;
         }
 
         internal override int InternalGetMessageSize()
         {
             return base.InternalGetMessageSize() + BodyName.GetByteCount() + sizeof(int) * 2 + sizeof(float) * 2 + sizeof(bool) * 3 + sizeof(double) * 3 * 3 +
                 sizeof(float) * 4 * 1 + sizeof(double) * 8;
+        }
+
+        private PositionFlags BuildFlags()
+        {
+            var flags = PositionFlags.None;
+            if (Landed) flags |= PositionFlags.Landed;
+            if (Splashed) flags |= PositionFlags.Splashed;
+            if (HackingGravity) flags |= PositionFlags.HackingGravity;
+            if (!string.IsNullOrEmpty(BodyName)) flags |= PositionFlags.HasBodyName;
+            return flags;
+        }
+
+        private static float ClampToSignedUnit(float value)
+        {
+            return Math.Max(-1f, Math.Min(1f, value));
+        }
+
+        private static float WrapAngleDegrees(double value)
+        {
+            var wrapped = value % 360d;
+            if (wrapped < 0)
+                wrapped += 360d;
+            return (float)wrapped;
         }
     }
 }

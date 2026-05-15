@@ -17,6 +17,8 @@ TestResults/*
 Config/
 logs/
 Universe/
+*_*.md
+GameData/
 
 LmpClient/*.csproj.user
 LmpCommon/*.csproj.user
@@ -30,3 +32,5 @@ Server/*.csproj.user
 LmpGlobal/*.csproj.user
 
 Server/packages
+LmpClient/GameData/LunaMultiPlayer/Plugins/LmpClient.dll
+rebuildKSP.sh

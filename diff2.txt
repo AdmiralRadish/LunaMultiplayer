@@ -1,0 +1,117 @@
+diff --git a/LmpClient/Systems/TimeSync/TimeSyncSystem.cs b/LmpClient/Systems/TimeSync/TimeSyncSystem.cs
+index c73b0b77..c884cd7b 100644
+--- a/LmpClient/Systems/TimeSync/TimeSyncSystem.cs
++++ b/LmpClient/Systems/TimeSync/TimeSyncSystem.cs
+@@ -6,6 +6,7 @@
+ using LmpClient.Systems.Warp;
+ using LmpCommon.Time;
+ using System;
++using System.Collections.Generic;
+ using UniLinq;
+ using UnityEngine;
+ using UnityEngine.Profiling;
+@@ -70,12 +71,25 @@ public static double UniversalTime
+         /// </summary>
+         private const int MaxPhysicsClockMsError = 3500;
+ 
++        /// <summary>
++        /// Minimum error needed to force a sync when entering spectate mode.
++        /// Small errors are corrected by skewing and do not require a hard UT snap.
++        /// </summary>
++        private const int MinSpectateForcedSyncMsError = 1000;
++
++        /// <summary>
++        /// Prevent repeated hard snaps when players quickly switch between vessels.
++        /// </summary>
++        private const int SpectateForcedSyncCooldownMs = 5000;
++
+         #endregion
+ 
+         #region Private
+ 
+         private static bool CurrentlyWarping => WarpSystem.Singleton.CurrentSubspace == -1;
+ 
++        private static DateTime LastForcedSyncTime { get; set; } = DateTime.MinValue;
++
+         private static bool CanSyncTime
+         {
+             get
+@@ -191,13 +205,24 @@ private static void UpdateUniversalTime()
+         /// <summary>
+         /// Forces a time sync against the server time
+         /// </summary>
+-        public void ForceTimeSync()
++        public void ForceTimeSync(bool fromSpectateStart = false)
+         {
+             if (Enabled && !CurrentlyWarping && CanSyncTime && !WarpSystem.Singleton.WaitingSubspaceIdFromServer)
+             {
++                if (fromSpectateStart)
++                {
++                    var currentErrorMs = Math.Abs(TimeUtil.SecondsToMilliseconds(CurrentErrorSec));
++                    if (currentErrorMs < MinSpectateForcedSyncMsError)
++                        return;
++
++                    if ((LunaComputerTime.UtcNow - LastForcedSyncTime).TotalMilliseconds < SpectateForcedSyncCooldownMs)
++                        return;
++                }
++
+                 var targetTime = WarpSystem.Singleton.CurrentSubspaceTime;
+                 LunaLog.LogWarning($"FORCING a time sync from: {UniversalTime} to: {targetTime}. Error: {TimeUtil.SecondsToMilliseconds(CurrentErrorSec)}");
+                 SetGameTime(targetTime);
++                LastForcedSyncTime = LunaComputerTime.UtcNow;
+             }
+         }
+ 
+@@ -207,26 +232,46 @@ public void ForceTimeSync()
+         /// </summary>
+         public void SetGameTime(double targetTick)
+         {
+-            if (double.IsNaN(targetTick) || double.IsInfinity(targetTick) || targetTick < 0)
+-            {
+-                LunaLog.LogWarning($"[LMP]: Ignoring invalid game-time sync target {targetTick} ΓÇö value is non-finite or negative. This indicates a server time-difference calculation error.");
+-                return;
+-            }
++            var previousTime = UniversalTime;
++            var activeVesselAdvanced = false;
+ 
+             if (HighLogic.LoadedSceneIsFlight)
+             {
+                 //As we are syncing to a new game time, we must advance all the ship positions and put them in the correct orbit "epoch"
+                 var vesselsToUpdate = LockSystem.LockQuery.GetAllUnloadedUpdateLocks(SettingsSystem.CurrentSettings.PlayerName)
+                     .Select(l => FlightGlobals.FindVessel(l.VesselId))
+-                    .Where(v => v != null);
++                    .Where(v => v != null)
++                    .ToList();
++
++                var advancedVesselIds = new HashSet<Guid>();
+ 
+                 foreach (var vessel in vesselsToUpdate)
+                 {
+                     vessel.AdvanceShipPosition(targetTick);
++                    advancedVesselIds.Add(vessel.id);
++                }
++
++                //When a hard UT correction occurs during vessel switching/spectating,
++                //the active loaded vessel also needs an explicit epoch advance or it can
++                //appear to phase-shift against the body after the snap.
++                var activeVessel = FlightGlobals.ActiveVessel;
++                if (activeVessel != null && !advancedVesselIds.Contains(activeVessel.id))
++                {
++                    activeVessel.AdvanceShipPosition(targetTick);
++                    activeVesselAdvanced = true;
+                 }
+             }
+ 
+             Planetarium.SetUniversalTime(targetTick);
++
++            var jumpSeconds = targetTick - previousTime;
++            if (HighLogic.LoadedSceneIsFlight && Math.Abs(jumpSeconds) > 0.5)
++            {
++                var activeVessel = FlightGlobals.ActiveVessel;
++                LunaLog.Log($"[LMP]: SetGameTime jump {jumpSeconds:F3}s (from {previousTime:F5} to {targetTick:F5}), " +
++                            $"active vessel: {activeVessel?.vesselName ?? "<null>"} ({activeVessel?.id}), " +
++                            $"advanced active vessel: {activeVesselAdvanced}");
++            }
+         }
+ 
+         #endregion

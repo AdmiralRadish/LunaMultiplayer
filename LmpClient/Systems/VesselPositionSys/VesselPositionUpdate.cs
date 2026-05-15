@@ -30,6 +30,34 @@ namespace LmpClient.Systems.VesselPositionSys
             }
         }
 
+        /// <summary>
+        /// Here we adjust the LAN according to the time of the subspace where the player send the message.
+        /// If we don't do this, then the orbit will be shifted in the longitude axis as your planet might be more
+        /// advanced in time so your planet rotations will not match
+        /// </summary>
+        private static double GetLanFixFactor(double timestamp, int subspaceId, Vessel vessel, CelestialBody body)
+        {
+            //If the vessel is in orbit we return 0 as we want to see the vessel IN THE FUTURE. This makes the behaviour closer to what KSP in single player does
+            if (vessel && vessel.situation >= Vessel.Situations.ORBITING)
+                return 0;
+
+            //If the vessel is in atmosphere, we must show the REAL position of the vessel as if we use the projection, the vessel might be inside kerbin
+            //if we are in a different subspace
+            if (body.SiderealDayLength() > 0)
+            {
+                if (subspaceId == -1 && timestamp < TimeSyncSystem.UniversalTime)
+                    return Math.Abs((TimeSyncSystem.UniversalTime - timestamp) * 360 / body.SiderealDayLength());
+
+                if (WarpSystem.Singleton.CurrentlyWarping || WarpSystem.Singleton.SubspaceIsInThePast(subspaceId))
+                {
+                    var timeDiff = WarpSystem.Singleton.GetTimeDifferenceWithGivenSubspace(subspaceId);
+                    return Math.Abs(timeDiff * 360 / body.SiderealDayLength());
+                }
+            }
+
+            return 0;
+        }
+
         public CelestialBody Body => GetBody(BodyIndex);
 
         public VesselPositionUpdate Target { get; set; }
@@ -42,9 +70,6 @@ namespace LmpClient.Systems.VesselPositionSys
         public bool Landed { get; set; }
         public bool Splashed { get; set; }
         public double[] LatLonAlt { get; set; } = new double[3];
-        public double[] VelocityVector { get; set; } = new double[3];
-        public double[] NormalVector { get; set; } = new double[3];
-        public double[] Orbit { get; set; } = new double[8];
         public float[] SrfRelRotation { get; set; } = new float[4];
         public float PingSec { get; set; }
         public float HeightFromTerrain { get; set; }
@@ -56,10 +81,13 @@ namespace LmpClient.Systems.VesselPositionSys
 
         #region Vessel position information fields
 
+        public double[] Orbit { get; set; } = new double[8];
+        public float[] VelocityVector { get; set; } = new float[3];
+        public float[] NormalVector { get; set; } = new float[3];
         public Orbit KspOrbit { get; set; } = new Orbit();
         public Vector3d Velocity => new Vector3d(VelocityVector[0], VelocityVector[1], VelocityVector[2]);
         public Quaternion SurfaceRelRotation => new Quaternion(SrfRelRotation[0], SrfRelRotation[1], SrfRelRotation[2], SrfRelRotation[3]);
-        public Vector3 Normal => new Vector3d(NormalVector[0], NormalVector[1], NormalVector[2]);
+        public Vector3 Normal => new Vector3(NormalVector[0], NormalVector[1], NormalVector[2]);
 
         #endregion
 
@@ -212,20 +240,24 @@ namespace LmpClient.Systems.VesselPositionSys
             Target.KspOrbit.SetOrbit(Target.Orbit[0], Target.Orbit[1], Target.Orbit[2], Target.Orbit[3] + lanFixFactor, Target.Orbit[4], Target.Orbit[5] + meanAnomalyFixFactor, Target.Orbit[6], Target.Body);
         }
 
+        /// <summary>
+        /// Returns the epoch for the target interpolation state. Always use the epoch value sent from the server.
+        /// Recalculating based on Planetarium.GetUniversalTime() causes massive orbit shifts on deep-space
+        /// trajectories, especially long-coast missions where epoch age can be years old.
+        /// Mean anomaly adjustments for subspace time are handled separately via GetMeanAnomalyFixFactor().
+        /// </summary>
         private double CalculateTargetEpochTime(double targetEpoch)
         {
-            if (SubspaceId == -1 || WarpSystem.Singleton.CurrentlyWarping || WarpSystem.Singleton.SubspaceIsInThePast(SubspaceId))
-                return targetEpoch;
-
-            return Planetarium.GetUniversalTime() + (Target.GameTimeStamp - GameTimeStamp);
+            return targetEpoch;
         }
 
+        /// <summary>
+        /// Returns the epoch for the current interpolation state. Always use the epoch value sent from the server.
+        /// Recalculating based on Planetarium.GetUniversalTime() causes massive orbit shifts.
+        /// </summary>
         private double CalculateEpochTime(double currentEpoch)
         {
-            if (SubspaceId == -1 || WarpSystem.Singleton.CurrentlyWarping || WarpSystem.Singleton.SubspaceIsInThePast(SubspaceId))
-                return currentEpoch;
-
-            return Planetarium.GetUniversalTime();
+            return currentEpoch;
         }
 
         /// <summary>
@@ -247,34 +279,6 @@ namespace LmpClient.Systems.VesselPositionSys
             {
                 var timeDiff = WarpSystem.Singleton.GetTimeDifferenceWithGivenSubspace(subspaceId);
                 return (orbit.getObtAtUT(TimeSyncSystem.UniversalTime) - orbit.getObtAtUT(TimeSyncSystem.UniversalTime - timeDiff)) * orbit.meanMotion;
-            }
-
-            return 0;
-        }
-
-        /// <summary>
-        /// Here we adjust the LAN according to the time of the subspace where the player send the message.
-        /// If we don't do this, then the orbit will be shifted in the longitude axis as your planet might be more
-        /// advanced in time so your planet rotations will not match
-        /// </summary>
-        private static double GetLanFixFactor(double timestamp, int subspaceId, Vessel vessel, CelestialBody body)
-        {
-            //If the vessel is in orbit we return 0 as we want to see the vessel IN THE FUTURE. This makes the behaviour closer to what KSP in single player does
-            if (vessel && vessel.situation >= Vessel.Situations.ORBITING)
-                return 0;
-
-            //If the vessel is in atmosphere, we must show the REAL position of the vessel as if we use the projection, the vessel might be inside kerbin
-            //if we are in a different subspace
-            if (body.SiderealDayLength() > 0)
-            {
-                if (subspaceId == -1 && timestamp < TimeSyncSystem.UniversalTime)
-                    return Math.Abs((TimeSyncSystem.UniversalTime - timestamp) * 360 / body.SiderealDayLength());
-
-                if (WarpSystem.Singleton.CurrentlyWarping || WarpSystem.Singleton.SubspaceIsInThePast(subspaceId))
-                {
-                    var timeDiff = WarpSystem.Singleton.GetTimeDifferenceWithGivenSubspace(subspaceId);
-                    return Math.Abs(timeDiff * 360 / body.SiderealDayLength());
-                }
             }
 
             return 0;

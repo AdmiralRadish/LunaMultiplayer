@@ -86,6 +86,7 @@ namespace LmpClient.Systems.VesselPositionSys
 
             CurrentVesselUpdate.Clear();
             TargetVesselUpdateQueue.Clear();
+            VesselPositionMessageSender.ClearAllOrbitHistory();
         }
 
         private void HandleVesselUpdates()
@@ -184,10 +185,19 @@ namespace LmpClient.Systems.VesselPositionSys
         }
 
         /// <summary>
-        /// Checks if the given vessel id has position messages stored to be replayed
+        /// Checks if the given vessel id is being tracked by the position system.
+        /// For orbiting vessels, returns true permanently (prevents physics from corrupting
+        /// the LMP-authoritative orbit between updates).  For sub-orbital/atmospheric,
+        /// returns true only when the queue has pending items (original behavior — lets
+        /// KSP's physics feedback and vessel.SetPosition run between LMP updates).
         /// </summary>
         public bool VesselHavePositionUpdatesQueued(Guid vesselId)
         {
+            if (CurrentVesselUpdate.TryGetValue(vesselId, out var update)
+                && update.Vessel != null
+                && update.Vessel.situation > Vessel.Situations.FLYING)
+                return true;
+
             if (TargetVesselUpdateQueue.TryGetValue(vesselId, out var positionQueue))
             {
                 return positionQueue.Count > 0;
@@ -203,6 +213,7 @@ namespace LmpClient.Systems.VesselPositionSys
         {
             CurrentVesselUpdate.TryRemove(vesselId, out _);
             TargetVesselUpdateQueue.TryRemove(vesselId, out _);
+            VesselPositionMessageSender.ClearVesselOrbitHistory(vesselId);
         }
 
         /// <summary>

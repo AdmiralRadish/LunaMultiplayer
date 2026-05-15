@@ -1,0 +1,45 @@
+#Build this image with: docker build --file Dockerfile_Server_Debian -t lmpsrv:latest .
+#Delete the image with the command: docker image rm lmpsrv:latest
+
+#Create a container with: docker run -td -p 8800:8800/udp -p 8900:8900 --name lmpsrv lmpsrv:latest
+# the -t (tty) flag is needed so docker can send SIGINT for proper shutdown.
+#Attach to a container with: docker exec -it lmpsrv /bin/bash
+#When inside a container, you can detach with: CONTROL+P+Q
+#Check logs with: docker logs -f lmpsrv
+
+#Stop a container with: docker stop lmpsrv
+#Start a container with: docker start lmpsrv
+#Remove a container with: docker container rm lmpsrv
+
+# ── Stage 1: restore + source ──────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS base
+
+# Copy project/solution structure first (for restore layer caching)
+COPY .nuget                           /LunaMultiplayer/.nuget
+COPY LmpCommon/LmpCommon.shproj       /LunaMultiplayer/LmpCommon/LmpCommon.shproj
+COPY Lidgren/Lidgren.shproj           /LunaMultiplayer/Lidgren/Lidgren.shproj
+COPY LmpGlobal/LmpGlobal.shproj      /LunaMultiplayer/LmpGlobal/LmpGlobal.shproj
+COPY Lidgren.Core/Lidgren.Core.csproj /LunaMultiplayer/Lidgren.Core/Lidgren.Core.csproj
+COPY uhttpsharp/uhttpsharp.csproj     /LunaMultiplayer/uhttpsharp/uhttpsharp.csproj
+COPY LmpUpdater/LmpUpdater.csproj     /LunaMultiplayer/LmpUpdater/LmpUpdater.csproj
+COPY Server/Server.csproj             /LunaMultiplayer/Server/Server.csproj
+
+WORKDIR /LunaMultiplayer/Server
+RUN dotnet restore -r linux-x64
+
+# Copy the full source tree
+COPY . /LunaMultiplayer
+
+# ── Stage 2: publish ────────────────────────────────────────────────────────
+FROM base AS builder
+WORKDIR /LunaMultiplayer/Server
+RUN dotnet publish -c Release -r linux-x64 --self-contained --no-restore -o /publish
+
+# ── Stage 3: runtime (Debian-based, minimal) ───────────────────────────────
+FROM mcr.microsoft.com/dotnet/runtime-deps:6.0
+COPY --from=builder /publish/ /LMPServer/
+EXPOSE 8801/udp 8900/tcp
+VOLUME "/LMPServer/Config" "/LMPServer/Plugins" "/LMPServer/Universe" "/LMPServer/logs"
+STOPSIGNAL SIGINT
+WORKDIR /LMPServer
+ENTRYPOINT ["./Server"]

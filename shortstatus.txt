@@ -1,0 +1,17 @@
+ M LmpClient/Harmony/Part_Undock.cs
+ M LmpClient/LmpClient.csproj
+ M LmpClient/Systems/TimeSync/TimeSyncEvents.cs
+ M LmpClient/Systems/TimeSync/TimeSyncSystem.cs
+ M LmpClient/Systems/VesselUndockSys/VesselUndock.cs
+ M LmpClient/VesselUtilities/DockingPortUtil.cs
+ M Server/System/Vessel/VesselPositionDataUpdater.cs
+?? LmpClient/Harmony/ModuleDockingNode_Undock.cs
+?? LmpClient/Harmony/ModuleDockingNode_UndockSameVessel.cs
+?? branches.txt
+?? diff1.txt
+?? diff2.txt
+?? diff3.txt
+?? fullstat.txt
+?? log.txt
+?? shortstatus.txt
+?? status.txt
