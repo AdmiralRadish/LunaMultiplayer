@@ -56,10 +56,10 @@ namespace LmpClient.Systems.VesselPositionSys
 
         #region Vessel position information fields
 
-        public Orbit KspOrbit { get; set; } = new Orbit();
-        public Vector3d Velocity => new Vector3d(VelocityVector[0], VelocityVector[1], VelocityVector[2]);
-        public Quaternion SurfaceRelRotation => new Quaternion(SrfRelRotation[0], SrfRelRotation[1], SrfRelRotation[2], SrfRelRotation[3]);
-        public Vector3 Normal => new Vector3d(NormalVector[0], NormalVector[1], NormalVector[2]);
+    public Orbit KspOrbit { get; set; } = new Orbit();
+    public Vector3d Velocity => new Vector3d(VelocityVector[0], VelocityVector[1], VelocityVector[2]);
+    public Quaternion SurfaceRelRotation => new Quaternion(SrfRelRotation[0], SrfRelRotation[1], SrfRelRotation[2], SrfRelRotation[3]);
+    public Vector3 Normal => new Vector3((float)NormalVector[0], (float)NormalVector[1], (float)NormalVector[2]);
 
         #endregion
 
