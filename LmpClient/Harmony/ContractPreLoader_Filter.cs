@@ -20,21 +20,21 @@ namespace LmpClient.Harmony
     /// <c>NullReferenceException</c>.
     ///
     /// ContractConfigurator's ContractPreLoader catches the exception but then
-    /// <em>deliberately</em> re-logs it as [EXC] via <c>LoggingUtil.LogException</c>.
-    /// That means a finalizer on <c>Contract.Load</c> cannot prevent the [EXC] —
+    /// deliberately re-logs it as [EXC] via <c>LoggingUtil.LogException</c>.
+    /// That means a finalizer on <c>Contract.Load</c> cannot prevent the [EXC] --
     /// ContractPreLoader's catch block has already run by the time a Harmony finalizer
     /// would see the exception inside the method frame.
     ///
     /// The only reliable fix is to remove the bad CONTRACT nodes from the
-    /// ContractPreLoader scenario <em>before</em> <c>ContractPreLoader.OnLoad</c> is
-    /// called.  <c>ContractSystem.Instance</c> is available at this point because
+    /// ContractPreLoader scenario before <c>ContractPreLoader.OnLoad</c> is called.
+    /// <c>ContractSystem.Instance</c> is available at this point because
     /// ContractSystem (stock KSP) is always instantiated before ContractConfigurator's
     /// ContractPreLoader in the scenario module loading order.
     ///
     /// This class is NOT applied via <c>[HarmonyPatch]</c> attributes because
     /// <c>ContractPreLoader.OnLoad</c> is a virtual override: attribute-driven patches
     /// target the <c>ScenarioModule.OnLoad</c> base-class body, which is never
-    /// dispatched through when the instance is a ContractPreLoader.  Instead,
+    /// dispatched through when the instance is a ContractPreLoader. Instead,
     /// <see cref="HarmonyPatcher.PatchContractPreLoader"/> looks up the type at runtime
     /// and applies <see cref="Prefix"/> imperatively against the concrete override.
     ///
@@ -86,7 +86,7 @@ namespace LmpClient.Harmony
             // Guard: ensure ContractSystem has been initialised (it loads before ContractPreLoader).
             if (ContractSystem.Instance == null)
             {
-                LunaLog.LogWarning("[ContractPreLoader_Filter]: ContractSystem.Instance is null — skipping pre-validation.");
+                LunaLog.LogWarning("[ContractPreLoader_Filter]: ContractSystem.Instance is null - skipping pre-validation.");
                 return;
             }
 
@@ -119,8 +119,8 @@ namespace LmpClient.Harmony
                         var guid = child.GetValue("guid") ?? "unknown";
                         var type = child.GetValue("type") ?? "unknown";
                         LunaLog.LogWarning(
-                            $"[LMP]: ContractPreLoader — skipping contract {guid} (type: {type}): {reason}. " +
-                            $"An unavailability stub will be shown in Mission Control.");
+                            $"[LMP]: ContractPreLoader - skipping contract {guid} (type: {type}): {reason}. " +
+                            "An unavailability stub will be shown in Mission Control.");
                         removedCount++;
                         continue;
                     }
@@ -145,9 +145,9 @@ namespace LmpClient.Harmony
         ///
         /// Detects two failure modes:
         /// <list type="bullet">
-        ///   <item>Unknown type — <c>ContractSystem.GetParameterType</c> returns null,
+        ///   <item>Unknown type - <c>ContractSystem.GetParameterType</c> returns null,
         ///         causing a <c>NullReferenceException</c>.</item>
-        ///   <item>Missing required body field — a CC PARAM has body-context keys
+        ///   <item>Missing required body field - a CC PARAM has body-context keys
         ///         (e.g. <c>coverage</c>, <c>scanType</c>) but no body-target key
         ///         (e.g. <c>targetBody</c>), which causes CC's
         ///         <c>ConfigNodeUtil.ParseValue&lt;CelestialBody&gt;</c> to throw
