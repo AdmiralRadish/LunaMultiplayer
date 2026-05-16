@@ -290,6 +290,27 @@ namespace LmpClient.VesselUtilities
                 return false;
             }
 
+            // Fallback: when FSM reports an unexpected state, try to rehydrate the docking pair
+            // from part-tree / dockedPartUId data before hard-blocking undock.
+            var partner = FindPartnerFromPartTree(node);
+            if (partner == null && node.dockedPartUId != 0)
+                partner = FindPartnerByUId(node.dockedPartUId, node.vessel) ?? FindPartnerByUId(node.dockedPartUId);
+
+            if (partner?.fsm != null)
+            {
+                string nodeState, partnerState;
+                InferDockerDockeeRoles(node, partner, out nodeState, out partnerState);
+                RecoverDockedPair(node, partner, nodeState, partnerState,
+                    $"fallback pre-undock recovery from fsm='{node.fsm.currentStateName}'", node.vessel);
+
+                if (IsInDockedState(node))
+                    return true;
+            }
+
+            var inferredState = InferDockedStateForUndock(node);
+            if (TryRecoverToDockedState(node, inferredState))
+                return true;
+
             failureReason =
                 $"unsupported undock state in {context}: '{node.fsm.currentStateName}'";
             return false;
