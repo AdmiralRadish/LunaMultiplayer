@@ -29,8 +29,8 @@ namespace LmpClient.Base
         ///
         /// This must be done imperatively rather than via <c>[HarmonyPatch]</c> attributes
         /// because <c>ContractPreLoader.OnLoad</c> is a virtual override of
-        /// <c>ScenarioModule.OnLoad</c>. An attribute-based patch targeting the base class
-        /// method is never dispatched through for ContractPreLoader instances - the vtable
+        /// <c>ScenarioModule.OnLoad</c>.  An attribute-based patch targeting the base class
+        /// method is never dispatched through for ContractPreLoader instances — the vtable
         /// jumps directly to the derived-class body, bypassing our patch entirely.
         /// </summary>
         internal static void PatchContractPreLoader()
@@ -40,20 +40,20 @@ namespace LmpClient.Base
                 var ccplType = HarmonyLib.AccessTools.TypeByName("ContractConfigurator.ContractPreLoader");
                 if (ccplType == null)
                 {
-                    LunaLog.Log("[LMP]: ContractConfigurator.ContractPreLoader type not found - CC not installed, skipping contract pre-filter patch.");
+                    LunaLog.Log("[LMP]: ContractConfigurator.ContractPreLoader type not found — CC not installed, skipping contract pre-filter patch.");
                     return;
                 }
 
                 var onLoad = HarmonyLib.AccessTools.Method(ccplType, "OnLoad");
                 if (onLoad == null)
                 {
-                    LunaLog.LogWarning("[LMP]: ContractPreLoader.OnLoad method not found - CC version mismatch?");
+                    LunaLog.LogWarning("[LMP]: ContractPreLoader.OnLoad method not found — CC version mismatch?");
                     return;
                 }
 
                 var prefix = new HarmonyLib.HarmonyMethod(typeof(LmpClient.Harmony.ContractPreLoader_Filter), "Prefix");
                 HarmonyInstance.Patch(onLoad, prefix: prefix);
-                LunaLog.Log("[LMP]: Patched ContractConfigurator.ContractPreLoader.OnLoad - invalid contracts will be filtered before CC loads them.");
+                LunaLog.Log("[LMP]: Patched ContractConfigurator.ContractPreLoader.OnLoad — invalid contracts will be filtered before CC loads them.");
             }
             catch (Exception e)
             {
