@@ -35,7 +35,8 @@ namespace Server.Message
                     break;
                 case VesselMessageType.Position:
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
-                    if (client.Subspace == WarpContext.LatestSubspace.Id)
+                    if (client.Subspace == WarpContext.LatestSubspace.Id
+                        && VesselAuthorityGate.CanPersist(client, ((VesselPositionMsgData)messageData).VesselId, "Position"))
                         VesselDataUpdater.WritePositionDataToFile(messageData);
                     break;
                 case VesselMessageType.Flightstate:
@@ -115,12 +116,17 @@ namespace Server.Message
                 return;
             }
 
-            if (!VesselStoreSystem.VesselExists(msgData.VesselId))
+            var vesselAlreadyStored = VesselStoreSystem.VesselExists(msgData.VesselId);
+            if (!vesselAlreadyStored)
             {
                 LunaLog.Debug($"Saving vessel {msgData.VesselId} ({ByteSize.FromBytes(msgData.NumBytes).KiloBytes} KB) from {client.PlayerName}.");
             }
 
-            VesselDataUpdater.RawConfigNodeInsertOrUpdate(msgData.VesselId, Encoding.UTF8.GetString(msgData.Data, 0, msgData.NumBytes));
+            // Authority gate: only persist proto updates from the Control lock holder. First upload (vessel not
+            // yet stored) bypasses the gate so newly-launched vessels can be registered before lock acquisition
+            // races settle. Relay to other clients always runs so live tracking is unaffected.
+            if (!vesselAlreadyStored || VesselAuthorityGate.CanPersist(client, msgData.VesselId, "Proto"))
+                VesselDataUpdater.RawConfigNodeInsertOrUpdate(msgData.VesselId, Encoding.UTF8.GetString(msgData.Data, 0, msgData.NumBytes));
             MessageQueuer.RelayMessage<VesselSrvMsg>(client, msgData);
         }
 
