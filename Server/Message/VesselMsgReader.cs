@@ -44,33 +44,40 @@ namespace Server.Message
                     break;
                 case VesselMessageType.Flightstate:
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
-                    VesselDataUpdater.WriteFlightstateDataToFile(messageData);
+                    if (VesselAuthorityGate.CanPersist(client, ((VesselFlightStateMsgData)messageData).VesselId, "Flightstate"))
+                        VesselDataUpdater.WriteFlightstateDataToFile(messageData);
                     break;
                 case VesselMessageType.Update:
-                    VesselDataUpdater.WriteUpdateDataToFile(messageData);
+                    if (VesselAuthorityGate.CanPersist(client, ((VesselUpdateMsgData)messageData).VesselId, "Update"))
+                        VesselDataUpdater.WriteUpdateDataToFile(messageData);
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     break;
                 case VesselMessageType.Resource:
-                    VesselDataUpdater.WriteResourceDataToFile(messageData);
+                    if (VesselAuthorityGate.CanPersist(client, ((VesselResourceMsgData)messageData).VesselId, "Resource"))
+                        VesselDataUpdater.WriteResourceDataToFile(messageData);
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     break;
                 case VesselMessageType.PartSyncField:
-                    VesselDataUpdater.WritePartSyncFieldDataToFile(messageData);
+                    if (VesselAuthorityGate.CanPersist(client, ((VesselPartSyncFieldMsgData)messageData).VesselId, "PartSyncField"))
+                        VesselDataUpdater.WritePartSyncFieldDataToFile(messageData);
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     break;
                 case VesselMessageType.PartSyncUiField:
-                    VesselDataUpdater.WritePartSyncUiFieldDataToFile(messageData);
+                    if (VesselAuthorityGate.CanPersist(client, ((VesselPartSyncUiFieldMsgData)messageData).VesselId, "PartSyncUiField"))
+                        VesselDataUpdater.WritePartSyncUiFieldDataToFile(messageData);
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     break;
                 case VesselMessageType.PartSyncCall:
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     break;
                 case VesselMessageType.ActionGroup:
-                    VesselDataUpdater.WriteActionGroupDataToFile(messageData);
+                    if (VesselAuthorityGate.CanPersist(client, ((VesselActionGroupMsgData)messageData).VesselId, "ActionGroup"))
+                        VesselDataUpdater.WriteActionGroupDataToFile(messageData);
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     break;
                 case VesselMessageType.Fairing:
-                    VesselDataUpdater.WriteFairingDataToFile(messageData);
+                    if (VesselAuthorityGate.CanPersist(client, ((VesselFairingMsgData)messageData).VesselId, "Fairing"))
+                        VesselDataUpdater.WriteFairingDataToFile(messageData);
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
                     break;
                 case VesselMessageType.Decouple:
