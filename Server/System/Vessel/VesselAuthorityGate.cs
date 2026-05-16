@@ -51,8 +51,9 @@ namespace Server.System.Vessel
             if (!LastRejectLogUtc.TryGetValue(vesselId, out var last) || now - last > LogThrottle)
             {
                 LastRejectLogUtc[vesselId] = now;
+                var owner = LockSystem.LockQuery.GetControlLockOwner(vesselId) ?? "<unknown>";
                 LunaLog.Debug($"[AuthorityGate] Rejected {operation} for vessel {vesselId} from {client.PlayerName} " +
-                              $"(rejections so far: {count}). Control lock is held by another player.");
+                              $"(rejections so far: {count}). Control lock owner: {owner}.");
             }
             return false;
         }
