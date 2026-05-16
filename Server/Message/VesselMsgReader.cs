@@ -11,6 +11,7 @@ using Server.Server;
 using Server.System;
 using Server.System.Vessel;
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 
@@ -18,6 +19,8 @@ namespace Server.Message
 {
     public class VesselMsgReader : ReaderBase
     {
+        private static readonly ConcurrentDictionary<Guid, string> InitialUploaders = new ConcurrentDictionary<Guid, string>();
+
         public override void HandleMessage(ClientStructure client, IClientMessageBase message)
         {
             var messageData = message.Data as VesselBaseMsgData;
@@ -97,6 +100,8 @@ namespace Server.Message
                 VesselStoreSystem.RemoveVessel(data.VesselId);
             }
 
+            InitialUploaders.TryRemove(data.VesselId, out _);
+
             if (data.AddToKillList)
                 VesselContext.RemovedVessels.TryAdd(data.VesselId, 0);
 
@@ -117,15 +122,19 @@ namespace Server.Message
             }
 
             var vesselAlreadyStored = VesselStoreSystem.VesselExists(msgData.VesselId);
+            var initialUploader = InitialUploaders.GetOrAdd(msgData.VesselId, _ => client.PlayerName);
+            var isInitialUploader = string.Equals(initialUploader, client.PlayerName, StringComparison.Ordinal);
             if (!vesselAlreadyStored)
             {
                 LunaLog.Debug($"Saving vessel {msgData.VesselId} ({ByteSize.FromBytes(msgData.NumBytes).KiloBytes} KB) from {client.PlayerName}.");
             }
 
             // Authority gate: only persist proto updates from the Control lock holder. First upload (vessel not
-            // yet stored) bypasses the gate so newly-launched vessels can be registered before lock acquisition
-            // races settle. Relay to other clients always runs so live tracking is unaffected.
-            if (!vesselAlreadyStored || VesselAuthorityGate.CanPersist(client, msgData.VesselId, "Proto"))
+            // yet stored) is accepted only from the first uploader we observe for this vessel id. This closes
+            // the short async insert race where concurrent proto senders could both see "not stored yet".
+            // Relay to other clients always runs so live tracking is unaffected.
+            if ((!vesselAlreadyStored && isInitialUploader) ||
+                (vesselAlreadyStored && VesselAuthorityGate.CanPersist(client, msgData.VesselId, "Proto")))
                 VesselDataUpdater.RawConfigNodeInsertOrUpdate(msgData.VesselId, Encoding.UTF8.GetString(msgData.Data, 0, msgData.NumBytes));
             MessageQueuer.RelayMessage<VesselSrvMsg>(client, msgData);
         }
