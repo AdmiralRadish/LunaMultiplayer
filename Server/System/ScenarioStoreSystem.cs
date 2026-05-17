@@ -67,6 +67,22 @@ namespace Server.System
                     ScenarioDataUpdater.MigrateProgressTrackingScenario(progressTrackingScenario);
                 }
 
+                // Repair any ContractSystem scenario produced by older LMP builds so
+                // that finished missions appear in Mission Control's Archived tab.
+                if (CurrentScenarios.TryGetValue("ContractSystem", out var contractsScenario))
+                {
+                    ScenarioDataUpdater.MigrateContractsScenario(contractsScenario);
+                }
+
+                // Strip duplicate crew item entries that older builds (or pre-dedupe
+                // sessions) accumulated under each Progress sub-node. Left in place these
+                // cause client scene transitions to take 20-30+ seconds because KSP saves
+                // the entire scenario on every transition (see issue #542).
+                if (CurrentScenarios.TryGetValue("ProgressTracking", out var progressTrackingScenario))
+                {
+                    ScenarioDataUpdater.MigrateProgressTrackingScenario(progressTrackingScenario);
+                }
+
                 if (createdFromScratch)
                 {
                     ScenarioDataUpdater.WriteScienceDataToFile(GameplaySettings.SettingsStore.StartingScience);
