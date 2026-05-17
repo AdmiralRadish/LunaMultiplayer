@@ -41,11 +41,7 @@ namespace Server
 
         private static bool IsRestart = false;
 
-<<<<<<< HEAD
         public static async Task Main(string[] args)
-=======
-        public static Task Main(string[] args)
->>>>>>> upstream/master
         {
             // Memory diagnostics are an opt-in operator tool. Gating them on a CLI flag
             // (rather than just the IntervalSettings entry) keeps the production log clean
@@ -160,16 +156,13 @@ namespace Server
                 TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.RefreshLatestVersionAsync, cancellationToken));
                 TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.DisplayNewVersionMsgAsync, cancellationToken));
 
-<<<<<<< HEAD
+                TaskContainer.Add(LongRunTaskFactory.StartNew(() => GcSystem.PerformGarbageCollectionAsync(cancellationToken), cancellationToken));
+
                 if (memoryDiagnosticsEnabled)
                 {
                     LunaLog.Normal("Memory diagnostics enabled (--memorydiag). [MemDiag] lines will be written to the log.");
                     TaskContainer.Add(LongRunTaskFactory.StartNew(() => MemoryDiagnosticsLogger.LogMemoryDiagnostics(CancellationTokenSrc.Token), CancellationTokenSrc.Token));
                 }
-
-=======
-                TaskContainer.Add(LongRunTaskFactory.StartNew(() => GcSystem.PerformGarbageCollectionAsync(cancellationToken), cancellationToken));
->>>>>>> upstream/master
                 while (ServerContext.ServerStarting)
                     Thread.Sleep(500);
 
