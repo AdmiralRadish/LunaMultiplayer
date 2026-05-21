@@ -65,7 +65,7 @@ namespace LmpMasterServer
                 Http.Handlers.WebHandler.InitWebFiles();
                 LunaHttpServer.Start();
                 _ = Task.Run(DedicatedServerRetriever.RefreshDedicatedServersListAsync);
-                _ = Task.Run(() => BannedIpsRetriever.RefreshBannedIps());
+                BannedIpsRetriever.Prewarm();
                 _ = Task.Run(MasterServerPortMapper.RefreshUpnpPortAsync);
                 _ = Task.Run(Lidgren.MasterServer.StartAsync);
             }
