@@ -7,6 +7,7 @@ using Server.Properties;
 using Server.Server;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -107,9 +108,42 @@ namespace Server.System
             if (stateIndex < 0 || string.IsNullOrWhiteSpace(stateValue))
                 return kerbalData.Take(numBytes).ToArray();
 
-            lines.Insert(stateIndex + 1, $"{indentation}rosterStatus = {stateValue}");
+            var normalizedRosterStatus = NormalizeRosterStatusValue(stateValue);
+            if (string.IsNullOrWhiteSpace(normalizedRosterStatus))
+            {
+                LunaLog.Debug($"Skipping rosterStatus inject for kerbal data with non-canonical state '{stateValue}'");
+                return kerbalData.Take(numBytes).ToArray();
+            }
+
+            lines.Insert(stateIndex + 1, $"{indentation}rosterStatus = {normalizedRosterStatus}");
             var normalizedText = string.Join(newLine, lines);
             return Encoding.UTF8.GetBytes(normalizedText);
+        }
+
+        private static string NormalizeRosterStatusValue(string stateValue)
+        {
+            if (string.IsNullOrWhiteSpace(stateValue)) return null;
+
+            var trimmed = stateValue.Trim();
+
+            if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var numericState))
+            {
+                switch (numericState)
+                {
+                    case 0: return "Available";
+                    case 1: return "Assigned";
+                    case 2: return "Missing";
+                    case 3: return "Dead";
+                    default: return null;
+                }
+            }
+
+            if (trimmed.Equals("Available", StringComparison.OrdinalIgnoreCase)) return "Available";
+            if (trimmed.Equals("Assigned", StringComparison.OrdinalIgnoreCase)) return "Assigned";
+            if (trimmed.Equals("Missing", StringComparison.OrdinalIgnoreCase)) return "Missing";
+            if (trimmed.Equals("Dead", StringComparison.OrdinalIgnoreCase)) return "Dead";
+
+            return null;
         }
     }
 }
