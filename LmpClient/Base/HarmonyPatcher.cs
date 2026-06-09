@@ -18,8 +18,55 @@ namespace LmpClient.Base
         /// </summary>
         private static void PatchOptionalMods()
         {
+            PatchSpaceTrackingTerminationButtons();
             SuppressClickThroughBlockerPopup();
             PatchContractPreLoader();
+        }
+
+        /// <summary>
+        /// Patches Tracking Station terminate/recover button callbacks in a version-tolerant way.
+        /// Some KSP builds differ only by method name casing (OnClick vs Onclick). Attribute-based
+        /// patching throws when a target method is absent, so we patch whichever variants exist.
+        /// </summary>
+        private static void PatchSpaceTrackingTerminationButtons()
+        {
+            try
+            {
+                var spaceTrackingType = HarmonyLib.AccessTools.TypeByName("KSP.UI.Screens.SpaceTracking");
+                if (spaceTrackingType == null)
+                {
+                    LunaLog.LogWarning("[LMP]: SpaceTracking type not found; skipping termination/recover Harmony patches.");
+                    return;
+                }
+
+                var deletePrefix = new HarmonyLib.HarmonyMethod(typeof(LmpClient.Harmony.SpaceTrackingTerminationGuard), nameof(LmpClient.Harmony.SpaceTrackingTerminationGuard.PrefixDeleteSelectedVessel));
+                var recoverPrefix = new HarmonyLib.HarmonyMethod(typeof(LmpClient.Harmony.SpaceTrackingTerminationGuard), nameof(LmpClient.Harmony.SpaceTrackingTerminationGuard.PrefixRecoverSelectedVessel));
+
+                var patchedDelete = 0;
+                var patchedRecover = 0;
+
+                foreach (var methodName in new[] { "BtnOnClick_DeleteSelectedVessel", "BtnOnclick_DeleteSelectedVessel" })
+                {
+                    var target = HarmonyLib.AccessTools.Method(spaceTrackingType, methodName);
+                    if (target == null) continue;
+                    HarmonyInstance.Patch(target, prefix: deletePrefix);
+                    patchedDelete++;
+                }
+
+                foreach (var methodName in new[] { "BtnOnClick_RecoverSelectedVessel", "BtnOnclick_RecoverSelectedVessel" })
+                {
+                    var target = HarmonyLib.AccessTools.Method(spaceTrackingType, methodName);
+                    if (target == null) continue;
+                    HarmonyInstance.Patch(target, prefix: recoverPrefix);
+                    patchedRecover++;
+                }
+
+                LunaLog.Log($"[LMP]: Patched SpaceTracking callbacks. Delete variants: {patchedDelete}, Recover variants: {patchedRecover}.");
+            }
+            catch (Exception e)
+            {
+                LunaLog.LogWarning($"[LMP]: Could not patch SpaceTracking termination/recover callbacks: {e.Message}");
+            }
         }
 
         /// <summary>

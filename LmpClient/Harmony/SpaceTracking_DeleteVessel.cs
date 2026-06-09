@@ -9,9 +9,14 @@ using LmpCommon.Enums;
 
 namespace LmpClient.Harmony
 {
+    /// <summary>
+    /// Shared guard + prefix methods for Tracking Station terminate/recover callbacks.
+    /// Patched at runtime by HarmonyPatcher so method-name differences across KSP builds
+    /// don't throw during PatchAll startup.
+    /// </summary>
     internal static class SpaceTrackingTerminationGuard
     {
-        public static bool ShouldAllowDelete()
+        public static bool PrefixDeleteSelectedVessel()
         {
             if (MainSystem.NetworkState < ClientState.Connected) return true;
 
@@ -24,7 +29,7 @@ namespace LmpClient.Harmony
             return true;
         }
 
-        public static bool ShouldAllowRecover(SpaceTracking spaceTracking)
+        public static bool PrefixRecoverSelectedVessel(SpaceTracking spaceTracking)
         {
             if (MainSystem.NetworkState < ClientState.Connected) return true;
 
@@ -39,67 +44,6 @@ namespace LmpClient.Harmony
             }
 
             return true;
-        }
-    }
-
-    /// <summary>
-    /// Blocks the Tracking Station "Terminate" button when AllowVesselTermination is false on the server.
-    /// Physical destruction (crashes, explosions) is unaffected — only the UI button path is intercepted.
-    /// </summary>
-    [HarmonyPatch(typeof(SpaceTracking))]
-    [HarmonyPatch("BtnOnClick_DeleteSelectedVessel")]
-    public class SpaceTracking_DeleteSelectedVessel
-    {
-        [HarmonyPrefix]
-        private static bool PrefixDeleteSelectedVessel()
-        {
-            return SpaceTrackingTerminationGuard.ShouldAllowDelete();
-        }
-    }
-
-    /// <summary>
-    /// Some KSP builds use Onclick (lowercase c) for the same button callback.
-    /// Patch both names to keep behavior stable across game versions.
-    /// </summary>
-    [HarmonyPatch(typeof(SpaceTracking))]
-    [HarmonyPatch("BtnOnclick_DeleteSelectedVessel")]
-    public class SpaceTracking_DeleteSelectedVessel_Onclick
-    {
-        [HarmonyPrefix]
-        private static bool PrefixDeleteSelectedVessel()
-        {
-            return SpaceTrackingTerminationGuard.ShouldAllowDelete();
-        }
-    }
-
-    /// <summary>
-    /// Blocks the Tracking Station "Recover" button when AllowVesselTermination is false on the server,
-    /// unless the vessel is recoverable (landed or splashed on the home body). Recoverable vessels are
-    /// allowed through so players can still recover missions that have safely returned home.
-    /// </summary>
-    [HarmonyPatch(typeof(SpaceTracking))]
-    [HarmonyPatch("BtnOnclick_RecoverSelectedVessel")]
-    public class SpaceTracking_RecoverSelectedVessel
-    {
-        [HarmonyPrefix]
-        private static bool PrefixRecoverSelectedVessel(SpaceTracking __instance)
-        {
-            return SpaceTrackingTerminationGuard.ShouldAllowRecover(__instance);
-        }
-    }
-
-    /// <summary>
-    /// Some KSP builds use OnClick (uppercase C) for the recover callback.
-    /// Patch both names to keep behavior stable across game versions.
-    /// </summary>
-    [HarmonyPatch(typeof(SpaceTracking))]
-    [HarmonyPatch("BtnOnClick_RecoverSelectedVessel")]
-    public class SpaceTracking_RecoverSelectedVessel_OnClick
-    {
-        [HarmonyPrefix]
-        private static bool PrefixRecoverSelectedVessel(SpaceTracking __instance)
-        {
-            return SpaceTrackingTerminationGuard.ShouldAllowRecover(__instance);
         }
     }
 }
