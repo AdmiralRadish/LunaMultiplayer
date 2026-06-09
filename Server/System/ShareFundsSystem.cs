@@ -13,6 +13,14 @@ namespace Server.System
         {
             LunaLog.Debug($"Funds received: {data.Funds} Reason: {data.Reason}");
 
+            // Guardrail: ignore progression-based economy packets to prevent duplicate reward storms
+            // from inflating the authoritative universe state.
+            if (string.Equals(data.Reason, "Progression", global::System.StringComparison.OrdinalIgnoreCase))
+            {
+                LunaLog.Warning($"Ignoring Funds update from {client.PlayerName} with reason '{data.Reason}' to prevent duplicated progression rewards.");
+                return;
+            }
+
             //send the funds update to all other clients
             MessageQueuer.RelayMessage<ShareProgressSrvMsg>(client, data);
             ScenarioDataUpdater.WriteFundsDataToFile(data.Funds);
