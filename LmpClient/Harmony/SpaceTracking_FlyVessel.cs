@@ -21,6 +21,8 @@ namespace LmpClient.Harmony
         {
             if (MainSystem.NetworkState < ClientState.Connected) return true;
 
+            if (SettingsSystem.CurrentSettings == null) return true;
+
             var vessel = __instance.SelectedVessel;
             if (vessel != null && vessel.situation == Vessel.Situations.PRELAUNCH)
             {

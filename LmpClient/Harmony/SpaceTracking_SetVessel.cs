@@ -22,6 +22,12 @@ namespace LmpClient.Harmony
         {
             if (MainSystem.NetworkState < ClientState.Connected) return;
 
+            // During scene transitions SpaceTracking can be partially initialized.
+            if (__instance == null || __instance.FlyButton == null || __instance.DeleteButton == null || __instance.RecoverButton == null)
+                return;
+
+            if (SettingsSystem.CurrentSettings == null) return;
+
             if (__instance.SelectedVessel != null)
             {
                 if (!LockSystem.LockQuery.CanRecoverOrTerminateTheVessel(__instance.SelectedVessel.id, SettingsSystem.CurrentSettings.PlayerName))

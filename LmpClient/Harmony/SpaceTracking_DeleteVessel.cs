@@ -20,7 +20,10 @@ namespace LmpClient.Harmony
         {
             if (MainSystem.NetworkState < ClientState.Connected) return true;
 
-            if (!SettingsSystem.ServerSettings.AllowVesselTermination)
+            var serverSettings = SettingsSystem.ServerSettings;
+            if (serverSettings == null) return true;
+
+            if (!serverSettings.AllowVesselTermination)
             {
                 LunaScreenMsg.PostScreenMessage(LocalizationContainer.ScreenText.TerminationDisabledByServer, 5f, ScreenMessageStyle.UPPER_CENTER);
                 return false;
@@ -33,10 +36,13 @@ namespace LmpClient.Harmony
         {
             if (MainSystem.NetworkState < ClientState.Connected) return true;
 
-            if (!SettingsSystem.ServerSettings.AllowVesselTermination)
+            var serverSettings = SettingsSystem.ServerSettings;
+            if (serverSettings == null) return true;
+
+            if (!serverSettings.AllowVesselTermination)
             {
                 // Allow recovery of vessels that are landed/splashed on the home body
-                if (spaceTracking.SelectedVessel != null && spaceTracking.SelectedVessel.IsRecoverable)
+                if (spaceTracking?.SelectedVessel != null && spaceTracking.SelectedVessel.IsRecoverable)
                     return true;
 
                 LunaScreenMsg.PostScreenMessage(LocalizationContainer.ScreenText.TerminationDisabledByServer, 5f, ScreenMessageStyle.UPPER_CENTER);
