@@ -1,4 +1,5 @@
 ﻿using LmpClient.Base;
+using LmpClient.Systems.ShareAchievements;
 using System;
 
 namespace LmpClient.Systems.ShareFunds
@@ -9,8 +10,12 @@ namespace LmpClient.Systems.ShareFunds
         {
             if (System.IgnoreEvents) return;
 
-            LunaLog.Log($"Funds changed to: {funds} reason: {reason}");
-            System.MessageSender.SendFundsMessage(funds, reason.ToString());
+            var reasonText = reason == TransactionReasons.Progression
+                ? ProgressionEventContext.GetProgressionReasonOrDefault(reason.ToString())
+                : reason.ToString();
+
+            LunaLog.Log($"Funds changed to: {funds} reason: {reasonText}");
+            System.MessageSender.SendFundsMessage(funds, reasonText);
         }
 
         public void RevertingDetected()

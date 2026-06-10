@@ -13,9 +13,11 @@ namespace Server.System
         {
             LunaLog.Debug($"Reputation received: {data.Reputation} Reason: {data.Reason}");
 
-            if (string.Equals(data.Reason, "Progression", global::System.StringComparison.OrdinalIgnoreCase))
+            if (ProgressionEconomyDeduplicationSystem.IsProgressionReason(data.Reason) &&
+                !ProgressionEconomyDeduplicationSystem.TryAllowAward(client.PlayerName, data.Reason, ProgressionResourceType.Reputation,
+                    out var progressionId, out var rejectionReason))
             {
-                LunaLog.Warning($"Ignoring Reputation update from {client.PlayerName} with reason '{data.Reason}' to prevent duplicated progression rewards.");
+                LunaLog.Warning($"Ignoring Reputation progression update from {client.PlayerName}. Reason='{data.Reason}', ProgressionId='{progressionId ?? "n/a"}', Blocked='{rejectionReason}'.");
                 return;
             }
 

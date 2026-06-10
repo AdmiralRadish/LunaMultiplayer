@@ -292,6 +292,7 @@
     <Compile Include="Systems\ShareAchievements\ShareAchievementsEvents.cs" />
     <Compile Include="Systems\ShareAchievements\ShareAchievementsMessageHandler.cs" />
     <Compile Include="Systems\ShareAchievements\ShareAchievementsMessageSender.cs" />
+    <Compile Include="Systems\ShareAchievements\ProgressionEventContext.cs" />
     <Compile Include="Systems\ShareAchievements\ShareAchievementsSystem.cs" />
     <Compile Include="Systems\ShareCareer\ShareCareerSystem.cs" />
     <Compile Include="Systems\ShareContracts\LmpUnavailableContract.cs" />

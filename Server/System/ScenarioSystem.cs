@@ -1,4 +1,5 @@
 ﻿using LmpCommon.Enums;
+using LmpCommon;
 using LmpCommon.Message.Data.Scenario;
 using LmpCommon.Message.Server;
 using Server.Client;
@@ -94,8 +95,19 @@ namespace Server.System
             LunaLog.Debug($"Saving {data.ScenarioCount} scenario modules from {client.PlayerName}");
             for (var i = 0; i < data.ScenarioCount; i++)
             {
+                var moduleName = data.ScenariosData[i].Module;
+
+                // Defense in depth: some scenario modules are synchronized via dedicated systems
+                // (contracts/funds/science/reputation/facilities/etc.) and must never be replaced
+                // wholesale from client snapshots.
+                if (IgnoredScenarios.IgnoreSend.Contains(moduleName) || IgnoredScenarios.IgnoreReceive.Contains(moduleName))
+                {
+                    LunaLog.Debug($"Ignoring scenario module '{moduleName}' from {client.PlayerName} (server-authoritative or unsupported module)");
+                    continue;
+                }
+
                 var scenarioAsConfigNode = Encoding.UTF8.GetString(data.ScenariosData[i].Data, 0, data.ScenariosData[i].NumBytes);
-                ScenarioDataUpdater.RawConfigNodeInsertOrUpdate(data.ScenariosData[i].Module, scenarioAsConfigNode);
+                ScenarioDataUpdater.RawConfigNodeInsertOrUpdate(moduleName, scenarioAsConfigNode);
             }
         }
     }

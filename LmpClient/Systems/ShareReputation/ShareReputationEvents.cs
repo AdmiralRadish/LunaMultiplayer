@@ -1,4 +1,5 @@
 ﻿using LmpClient.Base;
+using LmpClient.Systems.ShareAchievements;
 
 namespace LmpClient.Systems.ShareReputation
 {
@@ -8,8 +9,12 @@ namespace LmpClient.Systems.ShareReputation
         {
             if (System.IgnoreEvents) return;
 
-            LunaLog.Log($"Reputation changed to: {reputation} reason: {reason}");
-            System.MessageSender.SendReputationMsg(reputation, reason.ToString());
+            var reasonText = reason == TransactionReasons.Progression
+                ? ProgressionEventContext.GetProgressionReasonOrDefault(reason.ToString())
+                : reason.ToString();
+
+            LunaLog.Log($"Reputation changed to: {reputation} reason: {reasonText}");
+            System.MessageSender.SendReputationMsg(reputation, reasonText);
         }
 
         public void RevertingDetected()

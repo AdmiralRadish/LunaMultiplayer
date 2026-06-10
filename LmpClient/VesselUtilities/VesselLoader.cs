@@ -71,6 +71,7 @@ namespace LmpClient.VesselUtilities
             }
 
             SanitizePersistentIds(vesselProto);
+            EnsureCrewRosterEntries(vesselProto);
 
             try
             {
@@ -247,6 +248,47 @@ namespace LmpClient.VesselUtilities
                     LunaLog.Log($"[LMP]: PersistentId collision — remapping vessel {vesselProto.vesselID} " +
                                 $"part {part.partName} persistentId {part.persistentId} → {newId}");
                     part.persistentId = newId;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ensures crew referenced by incoming proto parts exist in the local CrewRoster.
+        ///
+        /// Some sync failures can leave the save ROSTER empty while vessels still carry
+        /// protoModuleCrew entries. During load, stock modules such as ModuleScienceConverter
+        /// can then dereference missing roster crew and throw NullReferenceException every tick.
+        /// Adding missing roster entries up front prevents that crash loop.
+        /// </summary>
+        private static void EnsureCrewRosterEntries(ProtoVessel vesselProto)
+        {
+            var roster = HighLogic.CurrentGame?.CrewRoster;
+            if (roster == null) return;
+
+            foreach (var snapshot in vesselProto.protoPartSnapshots)
+            {
+                if (snapshot?.protoModuleCrew == null) continue;
+
+                foreach (var crew in snapshot.protoModuleCrew)
+                {
+                    if (crew == null || string.IsNullOrEmpty(crew.name)) continue;
+                    if (roster.Exists(crew.name)) continue;
+
+                    try
+                    {
+                        if (crew.type != ProtoCrewMember.KerbalType.Crew)
+                            crew.type = ProtoCrewMember.KerbalType.Crew;
+
+                        if (crew.rosterStatus != ProtoCrewMember.RosterStatus.Dead)
+                            crew.rosterStatus = ProtoCrewMember.RosterStatus.Assigned;
+
+                        roster.AddCrewMember(crew);
+                        LunaLog.Log($"[LMP]: Added missing roster entry for crew '{crew.name}' while loading vessel {vesselProto.vesselID} ({vesselProto.vesselName}).");
+                    }
+                    catch (Exception e)
+                    {
+                        LunaLog.LogWarning($"[LMP]: Failed adding missing roster entry for '{crew.name}' while loading vessel {vesselProto.vesselID}: {e.Message}");
+                    }
                 }
             }
         }

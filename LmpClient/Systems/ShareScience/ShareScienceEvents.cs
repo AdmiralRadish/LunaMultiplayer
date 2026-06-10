@@ -1,4 +1,5 @@
 ﻿using LmpClient.Base;
+using LmpClient.Systems.ShareAchievements;
 
 namespace LmpClient.Systems.ShareScience
 {
@@ -8,7 +9,11 @@ namespace LmpClient.Systems.ShareScience
         {
             if (System.IgnoreEvents) return;
 
-            System.MessageSender.SendScienceMessage(science, reason.ToString());
+            var reasonText = reason == TransactionReasons.Progression
+                ? ProgressionEventContext.GetProgressionReasonOrDefault(reason.ToString())
+                : reason.ToString();
+
+            System.MessageSender.SendScienceMessage(science, reasonText);
         }
 
         public void RevertingDetected()

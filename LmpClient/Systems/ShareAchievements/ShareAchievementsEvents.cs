@@ -10,6 +10,7 @@ namespace LmpClient.Systems.ShareAchievements
         {
             if (System.IgnoreEvents) return;
 
+            ProgressionEventContext.RecordAchievement(progressNode?.Id);
             System.MessageSender.SendAchievementsMessage(progressNode);
             LunaLog.Log($"Achievement reached: {progressNode.Id}");
         }
@@ -18,6 +19,7 @@ namespace LmpClient.Systems.ShareAchievements
         {
             if (System.IgnoreEvents) return;
 
+            ProgressionEventContext.RecordAchievement(progressNode?.Id);
             System.MessageSender.SendAchievementsMessage(progressNode);
             LunaLog.Log($"Achievement completed: {progressNode.Id}");
         }
