@@ -3,6 +3,8 @@ using Server.Log;
 using Server.Settings.Structures;
 using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -44,7 +46,13 @@ namespace Server.System.Vessel
         {
             _ = Task.Run(() =>
             {
-                var vessel = new Classes.Vessel(vesselDataInConfigNodeFormat);
+                var sanitizedConfig = SanitizeIncomingVesselConfig(vesselDataInConfigNodeFormat, out var removedBlankCrewLines);
+                if (removedBlankCrewLines > 0)
+                {
+                    LunaLog.Warning($"Sanitized {removedBlankCrewLines} blank crew entries from incoming vessel definition {vesselId}.");
+                }
+
+                var vessel = new Classes.Vessel(sanitizedConfig);
                 if (GeneralSettings.SettingsStore.ModControl)
                 {
                     var vesselParts = vessel.Parts.GetAllValues().Select(p => p.Fields.GetSingle("name").Value);
@@ -60,6 +68,44 @@ namespace Server.System.Vessel
                     VesselStoreSystem.CurrentVessels.AddOrUpdate(vesselId, vessel, (key, existingVal) => vessel);
                 }
             });
+        }
+
+        private static string SanitizeIncomingVesselConfig(string vesselConfig, out int removedBlankCrewLines)
+        {
+            removedBlankCrewLines = 0;
+            if (string.IsNullOrEmpty(vesselConfig)) return vesselConfig;
+
+            using (var reader = new StringReader(vesselConfig))
+            {
+                var sanitizedBuilder = new StringBuilder(vesselConfig.Length);
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (IsBlankCrewLine(line))
+                    {
+                        removedBlankCrewLines++;
+                        continue;
+                    }
+
+                    sanitizedBuilder.AppendLine(line);
+                }
+
+                return sanitizedBuilder.ToString();
+            }
+        }
+
+        private static bool IsBlankCrewLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return false;
+
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith("crew", StringComparison.OrdinalIgnoreCase)) return false;
+
+            var equalsIndex = trimmed.IndexOf('=');
+            if (equalsIndex < 0) return false;
+
+            var rhs = trimmed.Substring(equalsIndex + 1);
+            return string.IsNullOrWhiteSpace(rhs);
         }
     }
 }
