@@ -16,6 +16,8 @@ namespace Server.System.Scenario
             {
                 try
                 {
+                    ProgressionEconomyDeduplicationSystem.RecordObservedTransition(achievementMsg?.Id);
+
                     lock (Semaphore.GetOrAdd("ProgressTracking", new object()))
                     {
                         if (!ScenarioStoreSystem.CurrentScenarios.TryGetValue("ProgressTracking", out var scenario)) return;

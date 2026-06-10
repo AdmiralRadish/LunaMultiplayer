@@ -1,6 +1,6 @@
 using LunaConfigNode.CfgNode;
-using Server.Log;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Server.System
@@ -20,6 +20,20 @@ namespace Server.System
         private const string AwardNodeName = "AWARD";
 
         private static readonly object Lock = new object();
+        private static readonly Dictionary<string, DateTime> ObservedTransitionsUtc = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        private static readonly TimeSpan TransitionWindow = TimeSpan.FromSeconds(30);
+
+        public static void RecordObservedTransition(string progressionId)
+        {
+            if (string.IsNullOrWhiteSpace(progressionId))
+                return;
+
+            lock (Lock)
+            {
+                ObservedTransitionsUtc[progressionId.Trim()] = DateTime.UtcNow;
+                PruneObservedTransitions(DateTime.UtcNow);
+            }
+        }
 
         public static bool TryAllowAward(string playerName, string reason, ProgressionResourceType resourceType, out string progressionId, out string rejectionReason)
         {
@@ -34,6 +48,12 @@ namespace Server.System
 
             lock (Lock)
             {
+                if (!HasRecentObservedTransition(progressionId))
+                {
+                    rejectionReason = "no verified transition";
+                    return false;
+                }
+
                 if (!ScenarioStoreSystem.CurrentScenarios.TryGetValue(ProgressTrackingScenario, out var scenario))
                 {
                     rejectionReason = "missing ProgressTracking scenario";
@@ -135,6 +155,25 @@ namespace Server.System
             {
                 node.UpdateValue(key, value);
             }
+        }
+
+        private static bool HasRecentObservedTransition(string progressionId)
+        {
+            var now = DateTime.UtcNow;
+            PruneObservedTransitions(now);
+
+            return ObservedTransitionsUtc.TryGetValue(progressionId, out var observedAt) && now - observedAt <= TransitionWindow;
+        }
+
+        private static void PruneObservedTransitions(DateTime now)
+        {
+            var staleKeys = ObservedTransitionsUtc
+                .Where(kvp => now - kvp.Value > TransitionWindow)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in staleKeys)
+                ObservedTransitionsUtc.Remove(key);
         }
     }
 }

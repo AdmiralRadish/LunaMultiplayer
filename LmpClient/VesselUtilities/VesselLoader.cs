@@ -34,6 +34,12 @@ namespace LmpClient.VesselUtilities
             if (HighLogic.CurrentGame?.flightState == null)
                 return false;
 
+            // Always sanitize incoming crew assignments and pre-seed roster entries first.
+            // This must happen before any fast-path return to prevent SetActiveVessel ->
+            // Part.RegisterCrew failures when a vessel references crew missing from roster.
+            SanitizeProtoCrewAssignments(vesselProto);
+            EnsureCrewRosterEntries(vesselProto);
+
             var reloadingOwnVessel = FlightGlobals.ActiveVessel && vesselProto.vesselID == FlightGlobals.ActiveVessel.id;
 
             //In case the vessel exists, silently remove them from unity and recreate it again
@@ -71,7 +77,6 @@ namespace LmpClient.VesselUtilities
             }
 
             SanitizePersistentIds(vesselProto);
-            EnsureCrewRosterEntries(vesselProto);
 
             try
             {
@@ -223,12 +228,6 @@ namespace LmpClient.VesselUtilities
         /// </summary>
         private static void SanitizePersistentIds(ProtoVessel vesselProto)
         {
-            // Strip null crew slots before load — Vessel.Start() calls RebuildCrewList() which
-            // iterates protoModuleCrew on every ProtoPartSnapshot; a null slot causes a
-            // NullReferenceException that Unity catches internally (never reaches our catch block).
-            foreach (var snapshot in vesselProto.protoPartSnapshots)
-                snapshot.protoModuleCrew?.RemoveAll(c => c == null);
-
             // Vessel-level persistentId
             if (FlightGlobals.PersistentVesselIds.ContainsKey(vesselProto.persistentId))
             {
@@ -289,6 +288,42 @@ namespace LmpClient.VesselUtilities
                     {
                         LunaLog.LogWarning($"[LMP]: Failed adding missing roster entry for '{crew.name}' while loading vessel {vesselProto.vesselID}: {e.Message}");
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sanitizes proto crew lists for every incoming vessel dynamically.
+        /// Removes null/blank entries and deduplicates repeated crew names
+        /// per part to avoid stock RegisterCrew and roster mismatch failures.
+        /// </summary>
+        private static void SanitizeProtoCrewAssignments(ProtoVessel vesselProto)
+        {
+            if (vesselProto?.protoPartSnapshots == null) return;
+
+            foreach (var snapshot in vesselProto.protoPartSnapshots)
+            {
+                if (snapshot?.protoModuleCrew == null) continue;
+
+                snapshot.protoModuleCrew.RemoveAll(c => c == null);
+
+                for (var i = snapshot.protoModuleCrew.Count - 1; i >= 0; i--)
+                {
+                    var crew = snapshot.protoModuleCrew[i];
+                    var trimmedName = crew?.name?.Trim();
+                    if (string.IsNullOrEmpty(trimmedName))
+                    {
+                        snapshot.protoModuleCrew.RemoveAt(i);
+                    }
+                }
+
+                var seenCrew = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                for (var i = snapshot.protoModuleCrew.Count - 1; i >= 0; i--)
+                {
+                    var crew = snapshot.protoModuleCrew[i];
+                    var normalizedName = crew?.name?.Trim() ?? string.Empty;
+                    if (!seenCrew.Add(normalizedName))
+                        snapshot.protoModuleCrew.RemoveAt(i);
                 }
             }
         }
