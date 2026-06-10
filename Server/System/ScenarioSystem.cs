@@ -9,6 +9,8 @@ using Server.Properties;
 using Server.Server;
 using Server.Settings.Structures;
 using Server.System.Scenario;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -19,6 +21,12 @@ namespace Server.System
     {
         public const string ScenarioFileFormat = ".txt";
         public static string ScenariosPath = Path.Combine(ServerContext.UniverseDirectory, "Scenarios");
+
+        private static readonly HashSet<string> IgnoredScenarioModules = new HashSet<string>(
+            IgnoredScenarios.IgnoreSend
+                .Concat(IgnoredScenarios.IgnoreReceive)
+                .Select(NormalizeModuleName),
+            StringComparer.OrdinalIgnoreCase);
 
         public static bool GenerateDefaultScenarios()
         {
@@ -96,19 +104,29 @@ namespace Server.System
             for (var i = 0; i < data.ScenarioCount; i++)
             {
                 var moduleName = data.ScenariosData[i].Module;
+                var normalizedModuleName = NormalizeModuleName(moduleName);
 
                 // Defense in depth: some scenario modules are synchronized via dedicated systems
                 // (contracts/funds/science/reputation/facilities/etc.) and must never be replaced
                 // wholesale from client snapshots.
-                if (IgnoredScenarios.IgnoreSend.Contains(moduleName) || IgnoredScenarios.IgnoreReceive.Contains(moduleName))
+                if (IgnoredScenarioModules.Contains(normalizedModuleName))
                 {
-                    LunaLog.Debug($"Ignoring scenario module '{moduleName}' from {client.PlayerName} (server-authoritative or unsupported module)");
+                    LunaLog.Debug($"Ignoring scenario module '{moduleName}' (normalized: '{normalizedModuleName}') from {client.PlayerName} (server-authoritative or unsupported module)");
                     continue;
                 }
 
                 var scenarioAsConfigNode = Encoding.UTF8.GetString(data.ScenariosData[i].Data, 0, data.ScenariosData[i].NumBytes);
-                ScenarioDataUpdater.RawConfigNodeInsertOrUpdate(moduleName, scenarioAsConfigNode);
+                ScenarioDataUpdater.RawConfigNodeInsertOrUpdate(normalizedModuleName, scenarioAsConfigNode);
             }
+        }
+
+        private static string NormalizeModuleName(string moduleName)
+        {
+            if (string.IsNullOrWhiteSpace(moduleName))
+                return string.Empty;
+
+            var trimmed = moduleName.Trim();
+            return Path.GetFileNameWithoutExtension(trimmed);
         }
     }
 }
