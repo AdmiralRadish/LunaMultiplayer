@@ -1,4 +1,5 @@
 ﻿using LmpClient.Extensions;
+using LmpClient.Systems.KerbalSys;
 using LmpClient.Utilities;
 using System;
 
@@ -60,6 +61,14 @@ namespace LmpClient.VesselUtilities
                 if (HighLogic.CurrentGame == null)
                     return null;
 
+                //Make sure every crew member referenced by this vessel exists in the roster BEFORE we
+                //construct the ProtoVessel. Stock ProtoPartSnapshot construction looks crew up by name and,
+                //if the kerbal isn't in CurrentGame.CrewRoster yet, it silently produces a blank-named crew
+                //member. Those blank crew later crash KSP.UI.Screens.AstronautComplex.CreateAssignedList and
+                //Part.RegisterCrew (NullReferenceException), wiping every kerbal from the astronaut complex.
+                //This is the last point where the original crew names are still available in the raw node.
+                EnsureRosterForVesselCrew(inputNode);
+
                 //Cannot reuse the Protovessel to save memory garbage as it does not have any clear method :(
                 return new ProtoVessel(inputNode, HighLogic.CurrentGame);
             }
@@ -71,6 +80,68 @@ namespace LmpClient.VesselUtilities
         }
 
         #region Private methods
+
+        /// <summary>
+        /// Ensures that every crew member referenced by the raw vessel ConfigNode exists in the current
+        /// game CrewRoster before the ProtoVessel is built. Crew assignments live inside PART nodes as
+        /// "crew = KerbalName" lines. If a referenced kerbal is missing from the roster, stock KSP creates
+        /// a blank-named crew member which later causes NullReferenceExceptions in the Astronaut Complex and
+        /// Part.RegisterCrew. We first drain any pending kerbal sync (so real kerbal data is used) and then
+        /// add a minimal placeholder for any crew name still missing.
+        /// </summary>
+        private static void EnsureRosterForVesselCrew(ConfigNode inputNode)
+        {
+            if (inputNode == null) return;
+
+            var roster = HighLogic.CurrentGame?.CrewRoster;
+            if (roster == null) return;
+
+            try
+            {
+                //Flush any kerbals we already received from the server so their full data is in the roster
+                KerbalSystem.Singleton.LoadKerbalsIntoGame();
+
+                foreach (var partNode in inputNode.GetNodes("PART"))
+                {
+                    foreach (var rawCrewName in partNode.GetValues("crew"))
+                    {
+                        var crewName = rawCrewName?.Trim();
+                        if (string.IsNullOrEmpty(crewName)) continue;
+                        if (roster.Exists(crewName)) continue;
+
+                        try
+                        {
+                            //Build a minimal kerbal node. ProtoCrewMember is constructed from a ConfigNode
+                            //(same pattern as KerbalSystem.LoadKerbal). This is only a last-resort placeholder
+                            //for a crew name that has no synced kerbal; normal kerbals are added by the drain above.
+                            var crewNode = new ConfigNode();
+                            crewNode.AddValue("name", crewName);
+                            crewNode.AddValue("type", ProtoCrewMember.KerbalType.Crew);
+                            crewNode.AddValue("trait", "Pilot");
+                            crewNode.AddValue("brave", 0.5f);
+                            crewNode.AddValue("dock", 0.5f);
+                            crewNode.AddValue("badS", false);
+                            crewNode.AddValue("state", ProtoCrewMember.RosterStatus.Assigned);
+
+                            var pcm = new ProtoCrewMember(HighLogic.CurrentGame.Mode, crewNode)
+                            {
+                                rosterStatus = ProtoCrewMember.RosterStatus.Assigned
+                            };
+                            roster.AddCrewMember(pcm);
+                            LunaLog.Log($"[LMP]: Pre-seeded missing roster crew '{crewName}' before loading vessel");
+                        }
+                        catch (Exception inner)
+                        {
+                            LunaLog.LogWarning($"[LMP]: Failed to pre-seed roster crew '{crewName}': {inner.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LunaLog.LogWarning($"[LMP]: Error ensuring roster for vessel crew: {e.Message}");
+            }
+        }
 
         private static bool PreSerializationChecks(ProtoVessel protoVessel, out ConfigNode configNode)
         {

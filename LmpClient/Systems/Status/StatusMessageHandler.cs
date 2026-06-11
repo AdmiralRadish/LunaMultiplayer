@@ -41,7 +41,9 @@ namespace LmpClient.Systems.Status
                 AddNewPlayerStatus(msg.PlayerStatus[i].PlayerName, msg.PlayerStatus[i].VesselText, msg.PlayerStatus[i].StatusText);
             }
 
-            MainSystem.NetworkState = ClientState.PlayersSynced;
+            //Guard against a late/duplicate reply regressing the state machine after we've already advanced
+            if (MainSystem.NetworkState < ClientState.PlayersSynced)
+                MainSystem.NetworkState = ClientState.PlayersSynced;
         }
 
         private static void AddNewPlayerStatus(string playerName, string vesselText, string statusText)

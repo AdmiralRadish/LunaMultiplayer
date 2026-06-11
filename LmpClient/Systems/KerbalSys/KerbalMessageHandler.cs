@@ -68,7 +68,9 @@ namespace LmpClient.Systems.KerbalSys
             }
 
             LunaLog.Log("[LMP]: Kerbals Synced!");
-            MainSystem.NetworkState = ClientState.KerbalsSynced;
+            //Guard against a late/duplicate reply regressing the state machine after we've already advanced
+            if (MainSystem.NetworkState < ClientState.KerbalsSynced)
+                MainSystem.NetworkState = ClientState.KerbalsSynced;
         }
     }
 }

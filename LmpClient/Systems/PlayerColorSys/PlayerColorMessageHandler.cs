@@ -33,7 +33,9 @@ namespace LmpClient.Systems.PlayerColorSys
 
                             StatusWindow.Singleton.ColorEventHandled = false; //Refresh colors in status window
                         }
-                        MainSystem.NetworkState = ClientState.ColorsSynced;
+                        //Guard against a late/duplicate reply regressing the state machine after we've already advanced
+                        if (MainSystem.NetworkState < ClientState.ColorsSynced)
+                            MainSystem.NetworkState = ClientState.ColorsSynced;
                     }
                     break;
                 case PlayerColorMessageType.Set:

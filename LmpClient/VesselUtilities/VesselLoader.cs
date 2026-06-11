@@ -34,12 +34,6 @@ namespace LmpClient.VesselUtilities
             if (HighLogic.CurrentGame?.flightState == null)
                 return false;
 
-            // Always sanitize incoming crew assignments and pre-seed roster entries first.
-            // This must happen before any fast-path return to prevent SetActiveVessel ->
-            // Part.RegisterCrew failures when a vessel references crew missing from roster.
-            SanitizeProtoCrewAssignments(vesselProto);
-            EnsureCrewRosterEntries(vesselProto);
-
             var reloadingOwnVessel = FlightGlobals.ActiveVessel && vesselProto.vesselID == FlightGlobals.ActiveVessel.id;
 
             //In case the vessel exists, silently remove them from unity and recreate it again
@@ -247,83 +241,6 @@ namespace LmpClient.VesselUtilities
                     LunaLog.Log($"[LMP]: PersistentId collision — remapping vessel {vesselProto.vesselID} " +
                                 $"part {part.partName} persistentId {part.persistentId} → {newId}");
                     part.persistentId = newId;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Ensures crew referenced by incoming proto parts exist in the local CrewRoster.
-        ///
-        /// Some sync failures can leave the save ROSTER empty while vessels still carry
-        /// protoModuleCrew entries. During load, stock modules such as ModuleScienceConverter
-        /// can then dereference missing roster crew and throw NullReferenceException every tick.
-        /// Adding missing roster entries up front prevents that crash loop.
-        /// </summary>
-        private static void EnsureCrewRosterEntries(ProtoVessel vesselProto)
-        {
-            var roster = HighLogic.CurrentGame?.CrewRoster;
-            if (roster == null) return;
-
-            foreach (var snapshot in vesselProto.protoPartSnapshots)
-            {
-                if (snapshot?.protoModuleCrew == null) continue;
-
-                foreach (var crew in snapshot.protoModuleCrew)
-                {
-                    if (crew == null || string.IsNullOrEmpty(crew.name)) continue;
-                    if (roster.Exists(crew.name)) continue;
-
-                    try
-                    {
-                        if (crew.type != ProtoCrewMember.KerbalType.Crew)
-                            crew.type = ProtoCrewMember.KerbalType.Crew;
-
-                        if (crew.rosterStatus != ProtoCrewMember.RosterStatus.Dead)
-                            crew.rosterStatus = ProtoCrewMember.RosterStatus.Assigned;
-
-                        roster.AddCrewMember(crew);
-                        LunaLog.Log($"[LMP]: Added missing roster entry for crew '{crew.name}' while loading vessel {vesselProto.vesselID} ({vesselProto.vesselName}).");
-                    }
-                    catch (Exception e)
-                    {
-                        LunaLog.LogWarning($"[LMP]: Failed adding missing roster entry for '{crew.name}' while loading vessel {vesselProto.vesselID}: {e.Message}");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Sanitizes proto crew lists for every incoming vessel dynamically.
-        /// Removes null/blank entries and deduplicates repeated crew names
-        /// per part to avoid stock RegisterCrew and roster mismatch failures.
-        /// </summary>
-        private static void SanitizeProtoCrewAssignments(ProtoVessel vesselProto)
-        {
-            if (vesselProto?.protoPartSnapshots == null) return;
-
-            foreach (var snapshot in vesselProto.protoPartSnapshots)
-            {
-                if (snapshot?.protoModuleCrew == null) continue;
-
-                snapshot.protoModuleCrew.RemoveAll(c => c == null);
-
-                for (var i = snapshot.protoModuleCrew.Count - 1; i >= 0; i--)
-                {
-                    var crew = snapshot.protoModuleCrew[i];
-                    var trimmedName = crew?.name?.Trim();
-                    if (string.IsNullOrEmpty(trimmedName))
-                    {
-                        snapshot.protoModuleCrew.RemoveAt(i);
-                    }
-                }
-
-                var seenCrew = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                for (var i = snapshot.protoModuleCrew.Count - 1; i >= 0; i--)
-                {
-                    var crew = snapshot.protoModuleCrew[i];
-                    var normalizedName = crew?.name?.Trim() ?? string.Empty;
-                    if (!seenCrew.Add(normalizedName))
-                        snapshot.protoModuleCrew.RemoveAt(i);
                 }
             }
         }

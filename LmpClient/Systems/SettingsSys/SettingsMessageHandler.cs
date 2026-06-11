@@ -111,7 +111,9 @@ namespace LmpClient.Systems.SettingsSys
             //Never allow quickload, it's useless in a multiplayer game
             SettingsSystem.ServerSettings.ServerParameters.Flight.CanQuickLoad = false;
 
-            MainSystem.NetworkState = ClientState.SettingsSynced;
+            //Guard against a late/duplicate reply regressing the state machine after we've already advanced
+            if (MainSystem.NetworkState < ClientState.SettingsSynced)
+                MainSystem.NetworkState = ClientState.SettingsSynced;
         }
     }
 }

@@ -42,7 +42,9 @@ namespace LmpClient.Systems.Warp
 
                         AddSubspace(-1, 0);//Add warping subspace
 
-                        MainSystem.NetworkState = ClientState.WarpsubspacesSynced;
+                        //Guard against a late/duplicate reply regressing the state machine after we've already advanced
+                        if (MainSystem.NetworkState < ClientState.WarpsubspacesSynced)
+                            MainSystem.NetworkState = ClientState.WarpsubspacesSynced;
                     }
                     break;
                 case WarpMessageType.NewSubspace:
