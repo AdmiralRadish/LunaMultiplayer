@@ -148,6 +148,13 @@ namespace Server.Message
             var initialUploader = InitialUploaders.GetOrAdd(msgData.VesselId, _ => client.PlayerName);
             var isInitialUploader = string.Equals(initialUploader, client.PlayerName, StringComparison.Ordinal);
             var vesselClass = ClassifySpaceObject(msgData, msgData.VesselId);
+
+            // For untouched asteroids/comets that already exist in the server store,
+            // ignore live proto updates entirely (no persist, no relay). This prevents
+            // repeated client-side orbit presentation drift from being fanned out.
+            if (vesselClass == SpaceObjectClass.Untouched && vesselAlreadyStored)
+                return;
+
             if (!vesselAlreadyStored)
             {
                 LunaLog.Debug($"Saving vessel {msgData.VesselId} ({ByteSize.FromBytes(msgData.NumBytes).KiloBytes} KB) from {client.PlayerName}.");
