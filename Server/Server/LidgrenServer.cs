@@ -119,7 +119,16 @@ namespace Server.Server
                                 msg.SenderConnection.Approve();
                                 break;
                             case NetIncomingMessageType.Data:
-                                ClientMessageReceiver.ReceiveCallback(client, msg);
+                                try
+                                {
+                                    ClientMessageReceiver.ReceiveCallback(client, msg);
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Drop malformed/unknown packets and keep the receive loop alive.
+                                    // Otherwise one bad message can kill networking for every client.
+                                    LunaLog.Warning($"Dropped invalid client packet from {msg.SenderEndPoint}: {ex.Message}");
+                                }
                                 break;
                             case NetIncomingMessageType.WarningMessage:
                                 LunaLog.Warning(msg.ReadString());
