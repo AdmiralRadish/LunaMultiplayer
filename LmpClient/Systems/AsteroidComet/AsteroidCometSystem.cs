@@ -29,6 +29,7 @@ namespace LmpClient.Systems.AsteroidComet
             TrackingEvent.onStartTrackingAsteroidOrComet.Add(AsteroidCometEvents.StartTrackingCometOrAsteroid);
             TrackingEvent.onStopTrackingAsteroidOrComet.Add(AsteroidCometEvents.StopTrackingCometOrAsteroid);
             GameEvents.onNewVesselCreated.Add(AsteroidCometEvents.NewVesselCreated);
+            GameEvents.onVesselSOIChanged.Add(AsteroidCometEvents.VesselSOIChanged);
         }
 
         protected override void OnDisabled()
@@ -40,6 +41,7 @@ namespace LmpClient.Systems.AsteroidComet
             TrackingEvent.onStartTrackingAsteroidOrComet.Remove(AsteroidCometEvents.StartTrackingCometOrAsteroid);
             TrackingEvent.onStopTrackingAsteroidOrComet.Remove(AsteroidCometEvents.StopTrackingCometOrAsteroid);
             GameEvents.onNewVesselCreated.Remove(AsteroidCometEvents.NewVesselCreated);
+            GameEvents.onVesselSOIChanged.Remove(AsteroidCometEvents.VesselSOIChanged);
         }
 
         #endregion

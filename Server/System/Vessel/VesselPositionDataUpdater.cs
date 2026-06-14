@@ -57,27 +57,16 @@ namespace Server.System.Vessel
                                                     $"{msgData.SrfRelRotation[2].ToString(CultureInfo.InvariantCulture)}," +
                                                     $"{msgData.SrfRelRotation[3].ToString(CultureInfo.InvariantCulture)}");
 
-                        // Only update the stored orbit elements when the incoming position message is
-                        // from the same reference body as the stored orbit. If a vessel is stored with a
-                        // heliocentric orbit (REF=0) but a client sends position data while the vessel is
-                        // inside a planet's SOI (REF=1, 2, …), overwriting the orbit block would replace
-                        // authoritative heliocentric elements with instantaneous SOI-relative elements.
-                        // When a new client then joins and receives the vessel, it gets the SOI orbit
-                        // instead of propagating from the heliocentric elements — causing apparent capture.
-                        var storedRef = vessel.Orbit.GetSingle("REF")?.Value;
-                        var incomingRef = ((int)msgData.Orbit[7]).ToString(CultureInfo.InvariantCulture);
-                        if (storedRef == null || storedRef == incomingRef)
-                        {
-                            vessel.Orbit.Update("INC", msgData.Orbit[0].ToString(CultureInfo.InvariantCulture));
-                            vessel.Orbit.Update("ECC", msgData.Orbit[1].ToString(CultureInfo.InvariantCulture));
-                            vessel.Orbit.Update("SMA", msgData.Orbit[2].ToString(CultureInfo.InvariantCulture));
-                            vessel.Orbit.Update("LAN", msgData.Orbit[3].ToString(CultureInfo.InvariantCulture));
-                            vessel.Orbit.Update("LPE", msgData.Orbit[4].ToString(CultureInfo.InvariantCulture));
-                            vessel.Orbit.Update("MNA", msgData.Orbit[5].ToString(CultureInfo.InvariantCulture));
-                            vessel.Orbit.Update("EPH", msgData.Orbit[6].ToString(CultureInfo.InvariantCulture));
-                            vessel.Orbit.Update("REF", incomingRef);
-                            ApplyOrbitIdent(vessel, msgData.BodyName);
-                        }
+                        vessel.Orbit.Update("INC", msgData.Orbit[0].ToString(CultureInfo.InvariantCulture));
+                        vessel.Orbit.Update("ECC", msgData.Orbit[1].ToString(CultureInfo.InvariantCulture));
+                        vessel.Orbit.Update("SMA", msgData.Orbit[2].ToString(CultureInfo.InvariantCulture));
+                        vessel.Orbit.Update("LAN", msgData.Orbit[3].ToString(CultureInfo.InvariantCulture));
+                        vessel.Orbit.Update("LPE", msgData.Orbit[4].ToString(CultureInfo.InvariantCulture));
+                        vessel.Orbit.Update("MNA", msgData.Orbit[5].ToString(CultureInfo.InvariantCulture));
+                        vessel.Orbit.Update("EPH", msgData.Orbit[6].ToString(CultureInfo.InvariantCulture));
+                        vessel.Orbit.Update("REF", msgData.Orbit[7].ToString(CultureInfo.InvariantCulture));
+
+                        ApplyOrbitIdent(vessel, msgData.BodyName);
 
                         VesselStoreSystem.PersistVesselToFile(msgData.VesselId);
                     }
