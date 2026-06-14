@@ -40,8 +40,8 @@ namespace LmpClient.VesselUtilities
             var existingVessel = FlightGlobals.FindVessel(vesselProto.vesselID);
             if (existingVessel != null)
             {
-                var untouchedSpaceObject = vesselProto.IsUntouchedSpaceObject();
-                if (!forceReload && !untouchedSpaceObject && existingVessel.Parts.Count == vesselProto.protoPartSnapshots.Count &&
+                var asteroidOrCometLineage = vesselProto.IsCometOrAsteroid();
+                if (!forceReload && !asteroidOrCometLineage && existingVessel.Parts.Count == vesselProto.protoPartSnapshots.Count &&
                     existingVessel.GetCrewCount() == vesselProto.GetVesselCrew().Count)
                 {
                     // Always keep the stored flight plan current even when skipping a full reload.
@@ -51,9 +51,9 @@ namespace LmpClient.VesselUtilities
                     return true;
                 }
 
-                if (!forceReload && untouchedSpaceObject)
+                if (!forceReload && asteroidOrCometLineage)
                 {
-                    LunaLog.Log($"[LMP]: Forcing authoritative reload for untouched space object {vesselProto.vesselID}");
+                    LunaLog.Log($"[LMP]: Forcing authoritative reload for asteroid/comet lineage vessel {vesselProto.vesselID}");
                 }
 
                 LunaLog.Log($"[LMP]: Reloading vessel {vesselProto.vesselID}");

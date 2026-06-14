@@ -24,7 +24,7 @@ namespace LmpClient.Systems.VesselPositionSys.ExtensionMethods
 
             ApplyInterpolationsToVessel(vessel, update, target, lerpedBody, percentage);
 
-            if (!vessel.IsUntouchedSpaceObject())
+            if (!vessel.IsCometOrAsteroid())
                 vessel.protoVessel.UpdatePositionValues(vessel);
         }
 

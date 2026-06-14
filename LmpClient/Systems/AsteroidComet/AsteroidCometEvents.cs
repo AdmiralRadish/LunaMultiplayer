@@ -33,10 +33,12 @@ namespace LmpClient.Systems.AsteroidComet
             if (potato == null || !potato.IsCometOrAsteroid())
                 return;
 
-            if (potato.IsColonizedSpaceObject())
-                return;
+            var isUntouched = potato.IsUntouchedSpaceObject();
+            var hasAuthority = isUntouched
+                ? LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName)
+                : LockSystem.LockQuery.ControlLockBelongsToPlayer(potato.id, SettingsSystem.CurrentSettings.PlayerName);
 
-            if (!LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName))
+            if (!hasAuthority)
                 return;
 
             LunaLog.Log($"Started to track comet/asteroid {potato.id}");
@@ -48,10 +50,12 @@ namespace LmpClient.Systems.AsteroidComet
             if (potato == null || !potato.IsCometOrAsteroid())
                 return;
 
-            if (potato.IsColonizedSpaceObject())
-                return;
+            var isUntouched = potato.IsUntouchedSpaceObject();
+            var hasAuthority = isUntouched
+                ? LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName)
+                : LockSystem.LockQuery.ControlLockBelongsToPlayer(potato.id, SettingsSystem.CurrentSettings.PlayerName);
 
-            if (!LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName))
+            if (!hasAuthority)
                 return;
 
             LunaLog.Log($"Stopped to track comet/asteroid {potato.id}");
@@ -66,10 +70,12 @@ namespace LmpClient.Systems.AsteroidComet
             if (vessel == null || !vessel.IsCometOrAsteroid())
                 return;
 
-            if (vessel.IsColonizedSpaceObject())
-                return;
+            var isUntouched = vessel.IsUntouchedSpaceObject();
+            var hasAuthority = isUntouched
+                ? LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName)
+                : LockSystem.LockQuery.ControlLockBelongsToPlayer(vessel.id, SettingsSystem.CurrentSettings.PlayerName);
 
-            if (!LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName))
+            if (!hasAuthority)
                 return;
 
             VesselProtoSystem.Singleton.MessageSender.SendVesselMessage(vessel, true);

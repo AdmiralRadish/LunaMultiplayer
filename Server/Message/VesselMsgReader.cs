@@ -246,12 +246,12 @@ namespace Server.Message
                 return true;
 
             var parts = vessel.Parts.GetAllValues().ToArray();
-            if (parts.Length != 1)
-                return false;
-
-            var partName = parts[0].Fields.GetSingle("name")?.Value;
-            return string.Equals(partName, "PotatoRoid", StringComparison.Ordinal) ||
-                   string.Equals(partName, "PotatoComet", StringComparison.Ordinal);
+            return parts.Any(p =>
+            {
+                var partName = p.Fields.GetSingle("name")?.Value;
+                return string.Equals(partName, "PotatoRoid", StringComparison.Ordinal) ||
+                       string.Equals(partName, "PotatoComet", StringComparison.Ordinal);
+            });
         }
 
         private static SpaceObjectClass ClassifySpaceObject(VesselProtoMsgData msgData, Guid vesselId)

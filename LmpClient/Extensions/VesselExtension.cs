@@ -23,8 +23,17 @@ namespace LmpClient.Extensions
             if (vessel != null && !vessel.loaded)
                 return vessel.protoVessel.IsCometOrAsteroid();
 
-            //Check the vessel has exactly one part.
-            return vessel && vessel.parts != null && vessel.parts.Count == 1 && vessel.parts[0].partName == "PotatoComet";
+            if (!vessel || vessel.parts == null) return false;
+
+            // Treat any vessel that still contains a potato comet core as comet lineage,
+            // even after docking/crewing/part attachment.
+            for (var i = 0; i < vessel.parts.Count; i++)
+            {
+                if (vessel.parts[i]?.partName == "PotatoComet")
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -35,8 +44,17 @@ namespace LmpClient.Extensions
             if (vessel != null && !vessel.loaded)
                 return vessel.protoVessel.IsCometOrAsteroid();
 
-            //Check the vessel has exactly one part.
-            return vessel && vessel.parts != null && vessel.parts.Count == 1 && vessel.parts[0].partName == "PotatoRoid";
+            if (!vessel || vessel.parts == null) return false;
+
+            // Treat any vessel that still contains a potato asteroid core as asteroid lineage,
+            // even after docking/crewing/part attachment.
+            for (var i = 0; i < vessel.parts.Count; i++)
+            {
+                if (vessel.parts[i]?.partName == "PotatoRoid")
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
