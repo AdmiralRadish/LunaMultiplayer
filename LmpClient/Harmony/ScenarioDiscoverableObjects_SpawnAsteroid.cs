@@ -20,7 +20,16 @@ namespace LmpClient.Harmony
         {
             if (MainSystem.NetworkState < ClientState.Connected) return true;
 
-            return false;
+            if (!LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName))
+                return false;
+
+            var currentAsteroids = AsteroidCometSystem.Singleton.GetAsteroidCount();
+            if (currentAsteroids >= SettingsSystem.ServerSettings.MaxNumberOfAsteroids)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

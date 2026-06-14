@@ -19,13 +19,6 @@ namespace Server.Message
 {
     public class VesselMsgReader : ReaderBase
     {
-        private enum SpaceObjectClass
-        {
-            Normal,
-            Untouched,
-            Colonized
-        }
-
         private static readonly ConcurrentDictionary<Guid, string> InitialUploaders = new ConcurrentDictionary<Guid, string>();
 
         public override void HandleMessage(ClientStructure client, IClientMessageBase message)
@@ -44,18 +37,9 @@ namespace Server.Message
                     HandleVesselRemove(client, messageData);
                     break;
                 case VesselMessageType.Position:
-                    var posVesselId = ((VesselPositionMsgData)messageData).VesselId;
-                    // For untouched asteroid/comet objects we do not relay position updates.
-                    // Their long-term orbit must come from authoritative proto/orbit state,
-                    // not from live packed/unpacked position noise.
-                    if (IsCometOrAsteroid(posVesselId))
-                        break;
-
                     MessageQueuer.RelayMessage<VesselSrvMsg>(client, messageData);
-                    // Comets/asteroids are relayed live but never persisted to disk to avoid accumulated drift.
                     if (client.Subspace == WarpContext.LatestSubspace.Id
-                        && VesselAuthorityGate.CanPersist(client, posVesselId, "Position")
-                        && !IsCometOrAsteroid(posVesselId))
+                        && VesselAuthorityGate.CanPersist(client, ((VesselPositionMsgData)messageData).VesselId, "Position"))
                         VesselDataUpdater.WritePositionDataToFile(messageData);
                     break;
                 case VesselMessageType.Flightstate:
@@ -147,14 +131,6 @@ namespace Server.Message
             var vesselAlreadyStored = VesselStoreSystem.VesselExists(msgData.VesselId);
             var initialUploader = InitialUploaders.GetOrAdd(msgData.VesselId, _ => client.PlayerName);
             var isInitialUploader = string.Equals(initialUploader, client.PlayerName, StringComparison.Ordinal);
-            var vesselClass = ClassifySpaceObject(msgData, msgData.VesselId);
-
-            // For untouched asteroids/comets that already exist in the server store,
-            // ignore live proto updates entirely (no persist, no relay). This prevents
-            // repeated client-side orbit presentation drift from being fanned out.
-            if (vesselClass == SpaceObjectClass.Untouched && vesselAlreadyStored)
-                return;
-
             if (!vesselAlreadyStored)
             {
                 LunaLog.Debug($"Saving vessel {msgData.VesselId} ({ByteSize.FromBytes(msgData.NumBytes).KiloBytes} KB) from {client.PlayerName}.");
@@ -164,20 +140,8 @@ namespace Server.Message
             // yet stored) is accepted only from the first uploader we observe for this vessel id. This closes
             // the short async insert race where concurrent proto senders could both see "not stored yet".
             // Relay to other clients always runs so live tracking is unaffected.
-            var canPersist = false;
-            if (vesselClass == SpaceObjectClass.Untouched)
-            {
-                canPersist = LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(client.PlayerName);
-                if (!canPersist)
-                    LunaLog.Debug($"[AuthorityGate] Rejected Proto for untouched space object {msgData.VesselId} from {client.PlayerName} (asteroid lock owner: {LockSystem.LockQuery.AsteroidCometLockOwner() ?? "<none>"}).");
-            }
-            else
-            {
-                canPersist = (!vesselAlreadyStored && isInitialUploader) ||
-                             (vesselAlreadyStored && VesselAuthorityGate.CanPersist(client, msgData.VesselId, "Proto"));
-            }
-
-            if (canPersist)
+            if ((!vesselAlreadyStored && isInitialUploader) ||
+                (vesselAlreadyStored && VesselAuthorityGate.CanPersist(client, msgData.VesselId, "Proto")))
                 VesselDataUpdater.RawConfigNodeInsertOrUpdate(msgData.VesselId, Encoding.UTF8.GetString(msgData.Data, 0, msgData.NumBytes));
             MessageQueuer.RelayMessage<VesselSrvMsg>(client, msgData);
         }
@@ -230,78 +194,6 @@ namespace Server.Message
             removeMsgData.VesselId = msgData.CoupledVesselId;
 
             MessageQueuer.SendToAllClients<VesselSrvMsg>(removeMsgData);
-        }
-
-        private static bool IsCometOrAsteroid(Guid vesselId)
-        {
-            if (!VesselStoreSystem.CurrentVessels.TryGetValue(vesselId, out var vessel))
-                return false;
-
-            var vesselType = vessel.Fields.GetSingle("type")?.Value;
-            if (string.Equals(vesselType, "SpaceObject", StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            var vesselName = vessel.Fields.GetSingle("name")?.Value;
-            if (!string.IsNullOrEmpty(vesselName) && vesselName.StartsWith("Ast.", StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            var parts = vessel.Parts.GetAllValues().ToArray();
-            return parts.Any(p =>
-            {
-                var partName = p.Fields.GetSingle("name")?.Value;
-                return string.Equals(partName, "PotatoRoid", StringComparison.Ordinal) ||
-                       string.Equals(partName, "PotatoComet", StringComparison.Ordinal);
-            });
-        }
-
-        private static SpaceObjectClass ClassifySpaceObject(VesselProtoMsgData msgData, Guid vesselId)
-        {
-            try
-            {
-                var vesselText = Encoding.UTF8.GetString(msgData.Data, 0, msgData.NumBytes);
-                var incomingVessel = new global::Server.System.Vessel.Classes.Vessel(vesselText);
-                return ClassifySpaceObject(incomingVessel);
-            }
-            catch
-            {
-                if (VesselStoreSystem.CurrentVessels.TryGetValue(vesselId, out var storedVessel))
-                    return ClassifySpaceObject(storedVessel);
-
-                return SpaceObjectClass.Normal;
-            }
-        }
-
-        private static SpaceObjectClass ClassifySpaceObject(global::Server.System.Vessel.Classes.Vessel vessel)
-        {
-            if (vessel == null)
-                return SpaceObjectClass.Normal;
-
-            var vesselType = vessel.Fields.GetSingle("type")?.Value;
-            var vesselName = vessel.Fields.GetSingle("name")?.Value;
-            var isSpaceObjectType = string.Equals(vesselType, "SpaceObject", StringComparison.OrdinalIgnoreCase);
-            var isLegacyAstName = !string.IsNullOrEmpty(vesselName) && vesselName.StartsWith("Ast.", StringComparison.OrdinalIgnoreCase);
-
-            var parts = vessel.Parts.GetAllValues().ToArray();
-            var partCount = parts.Length;
-            var hasPotatoCore = parts.Any(p =>
-            {
-                var partName = p.Fields.GetSingle("name")?.Value;
-                return string.Equals(partName, "PotatoRoid", StringComparison.Ordinal) ||
-                       string.Equals(partName, "PotatoComet", StringComparison.Ordinal);
-            });
-
-            var hasAsteroidSignature = isSpaceObjectType || isLegacyAstName || hasPotatoCore;
-            if (!hasAsteroidSignature)
-                return SpaceObjectClass.Normal;
-
-            var hasCrew = parts.Any(p => !string.IsNullOrWhiteSpace(p.Fields.GetSingle("crew")?.Value));
-
-            // Some update paths can temporarily flip vessel type away from SpaceObject while
-            // the vessel is still an untouched potato-core body. Classify by structure first.
-            if (partCount <= 1 && !hasCrew)
-                return SpaceObjectClass.Untouched;
-
-            return SpaceObjectClass.Colonized;
         }
     }
 }

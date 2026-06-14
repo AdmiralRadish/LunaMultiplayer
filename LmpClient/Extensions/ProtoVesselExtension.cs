@@ -99,15 +99,7 @@ namespace LmpClient.Extensions
             if ((protoVessel.protoPartSnapshots == null || protoVessel.protoPartSnapshots.Count == 0) && protoVessel.vesselName.StartsWith("Ast."))
                 return true;
 
-            if (protoVessel.protoPartSnapshots == null) return false;
-
-            for (var i = 0; i < protoVessel.protoPartSnapshots.Count; i++)
-            {
-                if (protoVessel.protoPartSnapshots[i]?.partName == "PotatoComet")
-                    return true;
-            }
-
-            return false;
+            return protoVessel.protoPartSnapshots != null && protoVessel.protoPartSnapshots.Count == 1 && protoVessel.protoPartSnapshots[0].partName == "PotatoComet";
         }
 
         /// <summary>
@@ -120,42 +112,7 @@ namespace LmpClient.Extensions
             if ((protoVessel.protoPartSnapshots == null || protoVessel.protoPartSnapshots.Count == 0) && protoVessel.vesselName.StartsWith("Ast."))
                 return true;
 
-            if (protoVessel.protoPartSnapshots == null) return false;
-
-            for (var i = 0; i < protoVessel.protoPartSnapshots.Count; i++)
-            {
-                if (protoVessel.protoPartSnapshots[i]?.partName == "PotatoRoid")
-                    return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Untouched space objects are authoritative through asteroid lock: single potato core,
-        /// no crew, and still typed as SpaceObject.
-        /// </summary>
-        public static bool IsUntouchedSpaceObject(this ProtoVessel protoVessel)
-        {
-            if (protoVessel == null) return false;
-            if (!protoVessel.IsCometOrAsteroid()) return false;
-
-            var partCount = protoVessel.protoPartSnapshots?.Count ?? 0;
-            var crewCount = protoVessel.GetVesselCrew()?.Count ?? 0;
-            return partCount <= 1 && crewCount == 0;
-        }
-
-        /// <summary>
-        /// Colonized space objects are potato-core craft that became regular player vessels.
-        /// </summary>
-        public static bool IsColonizedSpaceObject(this ProtoVessel protoVessel)
-        {
-            if (protoVessel == null) return false;
-            if (!protoVessel.IsCometOrAsteroid()) return false;
-
-            var partCount = protoVessel.protoPartSnapshots?.Count ?? 0;
-            var crewCount = protoVessel.GetVesselCrew()?.Count ?? 0;
-            return partCount > 1 || crewCount > 0;
+            return protoVessel.protoPartSnapshots != null && protoVessel.protoPartSnapshots.Count == 1 && protoVessel.protoPartSnapshots[0].partName == "PotatoRoid";
         }
 
         /// <summary>

@@ -9,7 +9,7 @@ namespace LmpClient.Systems.TimeSync
         /// </summary>
         public void OnStartSpectating()
         {
-            System.ForceTimeSync(true);
+            System.ForceTimeSync();
         }
     }
 }

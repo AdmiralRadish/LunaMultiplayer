@@ -23,17 +23,8 @@ namespace LmpClient.Extensions
             if (vessel != null && !vessel.loaded)
                 return vessel.protoVessel.IsCometOrAsteroid();
 
-            if (!vessel || vessel.parts == null) return false;
-
-            // Treat any vessel that still contains a potato comet core as comet lineage,
-            // even after docking/crewing/part attachment.
-            for (var i = 0; i < vessel.parts.Count; i++)
-            {
-                if (vessel.parts[i]?.partName == "PotatoComet")
-                    return true;
-            }
-
-            return false;
+            //Check the vessel has exactly one part.
+            return vessel && vessel.parts != null && vessel.parts.Count == 1 && vessel.parts[0].partName == "PotatoComet";
         }
 
         /// <summary>
@@ -44,44 +35,8 @@ namespace LmpClient.Extensions
             if (vessel != null && !vessel.loaded)
                 return vessel.protoVessel.IsCometOrAsteroid();
 
-            if (!vessel || vessel.parts == null) return false;
-
-            // Treat any vessel that still contains a potato asteroid core as asteroid lineage,
-            // even after docking/crewing/part attachment.
-            for (var i = 0; i < vessel.parts.Count; i++)
-            {
-                if (vessel.parts[i]?.partName == "PotatoRoid")
-                    return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Untouched space objects are authoritative through asteroid lock: single potato core,
-        /// no crew, and still typed as SpaceObject.
-        /// </summary>
-        public static bool IsUntouchedSpaceObject(this Vessel vessel)
-        {
-            if (vessel == null) return false;
-            if (!vessel.IsCometOrAsteroid()) return false;
-
-            var partCount = vessel.loaded ? vessel.parts?.Count ?? 0 : vessel.protoVessel?.protoPartSnapshots?.Count ?? 0;
-            var crewCount = vessel.GetCrewCount();
-            return partCount <= 1 && crewCount == 0;
-        }
-
-        /// <summary>
-        /// Colonized space objects are potato-core craft that became regular player vessels.
-        /// </summary>
-        public static bool IsColonizedSpaceObject(this Vessel vessel)
-        {
-            if (vessel == null) return false;
-            if (!vessel.IsCometOrAsteroid()) return false;
-
-            var partCount = vessel.loaded ? vessel.parts?.Count ?? 0 : vessel.protoVessel?.protoPartSnapshots?.Count ?? 0;
-            var crewCount = vessel.GetCrewCount();
-            return partCount > 1 || crewCount > 0;
+            //Check the vessel has exactly one part.
+            return vessel && vessel.parts != null && vessel.parts.Count == 1 && vessel.parts[0].partName == "PotatoRoid";
         }
 
         /// <summary>

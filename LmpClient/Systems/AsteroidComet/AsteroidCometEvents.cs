@@ -1,7 +1,5 @@
 ﻿using LmpClient.Base;
 using LmpClient.Extensions;
-using LmpClient.Systems.Lock;
-using LmpClient.Systems.SettingsSys;
 using LmpClient.Systems.VesselProtoSys;
 using LmpCommon.Locks;
 
@@ -30,34 +28,12 @@ namespace LmpClient.Systems.AsteroidComet
 
         public void StartTrackingCometOrAsteroid(Vessel potato)
         {
-            if (potato == null || !potato.IsCometOrAsteroid())
-                return;
-
-            var isUntouched = potato.IsUntouchedSpaceObject();
-            var hasAuthority = isUntouched
-                ? LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName)
-                : LockSystem.LockQuery.ControlLockBelongsToPlayer(potato.id, SettingsSystem.CurrentSettings.PlayerName);
-
-            if (!hasAuthority)
-                return;
-
             LunaLog.Log($"Started to track comet/asteroid {potato.id}");
             VesselProtoSystem.Singleton.MessageSender.SendVesselMessage(potato, true);
         }
 
         public void StopTrackingCometOrAsteroid(Vessel potato)
         {
-            if (potato == null || !potato.IsCometOrAsteroid())
-                return;
-
-            var isUntouched = potato.IsUntouchedSpaceObject();
-            var hasAuthority = isUntouched
-                ? LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName)
-                : LockSystem.LockQuery.ControlLockBelongsToPlayer(potato.id, SettingsSystem.CurrentSettings.PlayerName);
-
-            if (!hasAuthority)
-                return;
-
             LunaLog.Log($"Stopped to track comet/asteroid {potato.id}");
             VesselProtoSystem.Singleton.MessageSender.SendVesselMessage(potato, true);
         }
@@ -67,18 +43,8 @@ namespace LmpClient.Systems.AsteroidComet
         /// </summary>
         public void NewVesselCreated(Vessel vessel)
         {
-            if (vessel == null || !vessel.IsCometOrAsteroid())
-                return;
-
-            var isUntouched = vessel.IsUntouchedSpaceObject();
-            var hasAuthority = isUntouched
-                ? LockSystem.LockQuery.AsteroidCometLockBelongsToPlayer(SettingsSystem.CurrentSettings.PlayerName)
-                : LockSystem.LockQuery.ControlLockBelongsToPlayer(vessel.id, SettingsSystem.CurrentSettings.PlayerName);
-
-            if (!hasAuthority)
-                return;
-
-            VesselProtoSystem.Singleton.MessageSender.SendVesselMessage(vessel, true);
+            if (vessel.IsCometOrAsteroid())
+                VesselProtoSystem.Singleton.MessageSender.SendVesselMessage(vessel, true);
         }
     }
 }

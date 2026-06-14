@@ -1,5 +1,4 @@
-﻿using LmpClient.Extensions;
-using LmpClient.Systems.TimeSync;
+﻿using LmpClient.Systems.TimeSync;
 using LmpCommon;
 using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
@@ -24,8 +23,7 @@ namespace LmpClient.Systems.VesselPositionSys.ExtensionMethods
 
             ApplyInterpolationsToVessel(vessel, update, target, lerpedBody, percentage);
 
-            if (!vessel.IsCometOrAsteroid())
-                vessel.protoVessel.UpdatePositionValues(vessel);
+            vessel.protoVessel.UpdatePositionValues(vessel);
         }
 
         private static void ApplyOrbitInterpolation(Vessel vessel, VesselPositionUpdate update, VesselPositionUpdate target, CelestialBody lerpedBody, float percentage)

@@ -40,8 +40,7 @@ namespace LmpClient.VesselUtilities
             var existingVessel = FlightGlobals.FindVessel(vesselProto.vesselID);
             if (existingVessel != null)
             {
-                var asteroidOrCometLineage = vesselProto.IsCometOrAsteroid();
-                if (!forceReload && !asteroidOrCometLineage && existingVessel.Parts.Count == vesselProto.protoPartSnapshots.Count &&
+                if (!forceReload && existingVessel.Parts.Count == vesselProto.protoPartSnapshots.Count &&
                     existingVessel.GetCrewCount() == vesselProto.GetVesselCrew().Count)
                 {
                     // Always keep the stored flight plan current even when skipping a full reload.
@@ -49,11 +48,6 @@ namespace LmpClient.VesselUtilities
                     // PatchedConicSolver loads stale (empty) data on the next GoOffRails.
                     existingVessel.protoVessel.flightPlan = vesselProto.flightPlan;
                     return true;
-                }
-
-                if (!forceReload && asteroidOrCometLineage)
-                {
-                    LunaLog.Log($"[LMP]: Forcing authoritative reload for asteroid/comet lineage vessel {vesselProto.vesselID}");
                 }
 
                 LunaLog.Log($"[LMP]: Reloading vessel {vesselProto.vesselID}");
