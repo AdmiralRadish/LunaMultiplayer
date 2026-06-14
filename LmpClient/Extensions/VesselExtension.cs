@@ -50,7 +50,7 @@ namespace LmpClient.Extensions
 
             var partCount = vessel.loaded ? vessel.parts?.Count ?? 0 : vessel.protoVessel?.protoPartSnapshots?.Count ?? 0;
             var crewCount = vessel.GetCrewCount();
-            return vessel.vesselType == VesselType.SpaceObject && partCount <= 1 && crewCount == 0;
+            return partCount <= 1 && crewCount == 0;
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace LmpClient.Extensions
 
             var partCount = vessel.loaded ? vessel.parts?.Count ?? 0 : vessel.protoVessel?.protoPartSnapshots?.Count ?? 0;
             var crewCount = vessel.GetCrewCount();
-            return partCount > 1 || crewCount > 0 || vessel.vesselType != VesselType.SpaceObject;
+            return partCount > 1 || crewCount > 0;
         }
 
         /// <summary>

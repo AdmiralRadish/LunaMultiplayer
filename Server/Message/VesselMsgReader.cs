@@ -296,7 +296,9 @@ namespace Server.Message
 
             var hasCrew = parts.Any(p => !string.IsNullOrWhiteSpace(p.Fields.GetSingle("crew")?.Value));
 
-            if (isSpaceObjectType && partCount <= 1 && !hasCrew)
+            // Some update paths can temporarily flip vessel type away from SpaceObject while
+            // the vessel is still an untouched potato-core body. Classify by structure first.
+            if (partCount <= 1 && !hasCrew)
                 return SpaceObjectClass.Untouched;
 
             return SpaceObjectClass.Colonized;
