@@ -1,4 +1,5 @@
-﻿using LmpClient.Systems.TimeSync;
+﻿using LmpClient.Extensions;
+using LmpClient.Systems.TimeSync;
 using LmpCommon;
 using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
@@ -23,7 +24,8 @@ namespace LmpClient.Systems.VesselPositionSys.ExtensionMethods
 
             ApplyInterpolationsToVessel(vessel, update, target, lerpedBody, percentage);
 
-            vessel.protoVessel.UpdatePositionValues(vessel);
+            if (!vessel.IsUntouchedSpaceObject())
+                vessel.protoVessel.UpdatePositionValues(vessel);
         }
 
         private static void ApplyOrbitInterpolation(Vessel vessel, VesselPositionUpdate update, VesselPositionUpdate target, CelestialBody lerpedBody, float percentage)

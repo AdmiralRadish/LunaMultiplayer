@@ -212,20 +212,24 @@ namespace LmpClient.Systems.VesselPositionSys
             Target.KspOrbit.SetOrbit(Target.Orbit[0], Target.Orbit[1], Target.Orbit[2], Target.Orbit[3] + lanFixFactor, Target.Orbit[4], Target.Orbit[5] + meanAnomalyFixFactor, Target.Orbit[6], Target.Body);
         }
 
+        /// <summary>
+        /// Returns the epoch for the target interpolation state. Always use the epoch value sent from the server.
+        /// Recalculating based on Planetarium.GetUniversalTime() causes massive orbit shifts on deep-space
+        /// trajectories, especially long-coast missions where epoch age can be years old.
+        /// Mean anomaly adjustments for subspace time are handled separately via GetMeanAnomalyFixFactor().
+        /// </summary>
         private double CalculateTargetEpochTime(double targetEpoch)
         {
-            if (SubspaceId == -1 || WarpSystem.Singleton.CurrentlyWarping || WarpSystem.Singleton.SubspaceIsInThePast(SubspaceId))
-                return targetEpoch;
-
-            return Planetarium.GetUniversalTime() + (Target.GameTimeStamp - GameTimeStamp);
+            return targetEpoch;
         }
 
+        /// <summary>
+        /// Returns the epoch for the current interpolation state. Always use the epoch value sent from the server.
+        /// Recalculating based on Planetarium.GetUniversalTime() causes massive orbit shifts.
+        /// </summary>
         private double CalculateEpochTime(double currentEpoch)
         {
-            if (SubspaceId == -1 || WarpSystem.Singleton.CurrentlyWarping || WarpSystem.Singleton.SubspaceIsInThePast(SubspaceId))
-                return currentEpoch;
-
-            return Planetarium.GetUniversalTime();
+            return currentEpoch;
         }
 
         /// <summary>

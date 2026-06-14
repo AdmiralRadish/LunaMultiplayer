@@ -40,6 +40,33 @@ namespace LmpClient.Extensions
         }
 
         /// <summary>
+        /// Untouched space objects are authoritative through asteroid lock: single potato core,
+        /// no crew, and still typed as SpaceObject.
+        /// </summary>
+        public static bool IsUntouchedSpaceObject(this Vessel vessel)
+        {
+            if (vessel == null) return false;
+            if (!vessel.IsCometOrAsteroid()) return false;
+
+            var partCount = vessel.loaded ? vessel.parts?.Count ?? 0 : vessel.protoVessel?.protoPartSnapshots?.Count ?? 0;
+            var crewCount = vessel.GetCrewCount();
+            return vessel.vesselType == VesselType.SpaceObject && partCount <= 1 && crewCount == 0;
+        }
+
+        /// <summary>
+        /// Colonized space objects are potato-core craft that became regular player vessels.
+        /// </summary>
+        public static bool IsColonizedSpaceObject(this Vessel vessel)
+        {
+            if (vessel == null) return false;
+            if (!vessel.IsCometOrAsteroid()) return false;
+
+            var partCount = vessel.loaded ? vessel.parts?.Count ?? 0 : vessel.protoVessel?.protoPartSnapshots?.Count ?? 0;
+            var crewCount = vessel.GetCrewCount();
+            return partCount > 1 || crewCount > 0 || vessel.vesselType != VesselType.SpaceObject;
+        }
+
+        /// <summary>
         /// Advance the orbit epoch to the specified time sent as parameter
         /// </summary>
         public static void AdvanceShipPosition(this Vessel vessel, double time)

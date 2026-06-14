@@ -40,7 +40,8 @@ namespace LmpClient.VesselUtilities
             var existingVessel = FlightGlobals.FindVessel(vesselProto.vesselID);
             if (existingVessel != null)
             {
-                if (!forceReload && existingVessel.Parts.Count == vesselProto.protoPartSnapshots.Count &&
+                var untouchedSpaceObject = vesselProto.IsUntouchedSpaceObject();
+                if (!forceReload && !untouchedSpaceObject && existingVessel.Parts.Count == vesselProto.protoPartSnapshots.Count &&
                     existingVessel.GetCrewCount() == vesselProto.GetVesselCrew().Count)
                 {
                     // Always keep the stored flight plan current even when skipping a full reload.
@@ -48,6 +49,11 @@ namespace LmpClient.VesselUtilities
                     // PatchedConicSolver loads stale (empty) data on the next GoOffRails.
                     existingVessel.protoVessel.flightPlan = vesselProto.flightPlan;
                     return true;
+                }
+
+                if (!forceReload && untouchedSpaceObject)
+                {
+                    LunaLog.Log($"[LMP]: Forcing authoritative reload for untouched space object {vesselProto.vesselID}");
                 }
 
                 LunaLog.Log($"[LMP]: Reloading vessel {vesselProto.vesselID}");
