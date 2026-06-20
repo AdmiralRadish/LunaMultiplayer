@@ -56,7 +56,27 @@ namespace Server.System.Scenario
                 scenario.RemoveNode(LegacyFinishedParentNodeName);
         }
 
+        private const string ContractsParentNodeName = "CONTRACTS";
+        private const string ActiveContractNodeName = "CONTRACT";
+        private const string FinishedContractNodeName = "CONTRACT_FINISHED";
         private const string LegacyFinishedParentNodeName = "CONTRACTS_FINISHED";
+
+        private static bool IsFinishedContractState(string state)
+        {
+            if (string.IsNullOrEmpty(state)) return false;
+
+            switch (state)
+            {
+                case "Completed":
+                case "Cancelled":
+                case "DeadlineExpired":
+                case "Failed":
+                case "Withdrawn":
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         /// <summary>
         /// Returns every CONTRACT/CONTRACT_FINISHED child found under either the canonical
