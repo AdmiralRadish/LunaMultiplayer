@@ -93,7 +93,12 @@ namespace Server.Server
             ServerContext.ServerStarting = false;
         }
 
-        public static async void StartReceivingMessages()
+        public static void StartReceivingMessages()
+        {
+            _ = StartReceivingMessagesAsync();
+        }
+
+        public static async Task StartReceivingMessagesAsync()
         {
             // A single PeriodicTimer replaces the per-empty-poll `await Task.Delay(...)` that
             // previously dominated idle allocation in this thread. With no players connected the
@@ -250,6 +255,11 @@ namespace Server.Server
             var sendResult = Server.SendMessage(outmsg, client.Connection, message.NetDeliveryMethod, message.Channel);
 
             //Force send of packets
+            FlushSendQueue();
+        }
+
+        public static void FlushSendQueue()
+        {
             Server.FlushSendQueue();
         }
 

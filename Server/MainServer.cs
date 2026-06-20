@@ -40,19 +40,16 @@ namespace Server
         public static readonly CancellationTokenSource CancellationTokenSrc = new CancellationTokenSource();
 
         private static bool IsRestart = false;
+        private static bool MemoryDiagnosticsEnabled;
 
-<<<<<<< HEAD
-        public static async Task Main(string[] args)
-=======
         public static Task Main(string[] args)
->>>>>>> upstream/master
         {
             // Memory diagnostics are an opt-in operator tool. Gating them on a CLI flag
             // (rather than just the IntervalSettings entry) keeps the production log clean
             // by default and means turning diagnostics on for a hosted server is a single
             // launcher edit, not an XML edit followed by a restart.
             // Note: We're going to true it for now and return to HasFlag another time.
-            var memoryDiagnosticsEnabled = HasFlag(args, "--memorydiag");
+            MemoryDiagnosticsEnabled = HasFlag(args, "--memorydiag");
 
             //Verify the .NET runtime before anything else so we can give users a clear,
             //actionable message instead of failing later with a confusing error.
@@ -160,16 +157,12 @@ namespace Server
                 TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.RefreshLatestVersionAsync, cancellationToken));
                 TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.DisplayNewVersionMsgAsync, cancellationToken));
 
-<<<<<<< HEAD
-                if (memoryDiagnosticsEnabled)
+                if (MemoryDiagnosticsEnabled)
                 {
                     LunaLog.Normal("Memory diagnostics enabled (--memorydiag). [MemDiag] lines will be written to the log.");
                     TaskContainer.Add(LongRunTaskFactory.StartNew(() => MemoryDiagnosticsLogger.LogMemoryDiagnostics(CancellationTokenSrc.Token), CancellationTokenSrc.Token));
                 }
-
-=======
                 TaskContainer.Add(LongRunTaskFactory.StartNew(() => GcSystem.PerformGarbageCollectionAsync(cancellationToken), cancellationToken));
->>>>>>> upstream/master
                 while (ServerContext.ServerStarting)
                     Thread.Sleep(500);
 
