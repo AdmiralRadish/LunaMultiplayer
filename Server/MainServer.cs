@@ -23,7 +23,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.CommandLine;
 
 namespace Server
 {
@@ -41,34 +40,19 @@ namespace Server
 
         private static bool IsRestart = false;
 
-        public static Task Main(string[] args)
+        public static async Task Main(string[] args)
         {
+            // Memory diagnostics are an opt-in operator tool. Gating them on a CLI flag
+            // (rather than just the IntervalSettings entry) keeps the production log clean
+            // by default and means turning diagnostics on for a hosted server is a single
+            // launcher edit, not an XML edit followed by a restart.
+            // Note: We're going to true it for now and return to HasFlag another time.
+            var memoryDiagnosticsEnabled = HasFlag(args, "--memorydiag");
+
             //Verify the .NET runtime before anything else so we can give users a clear,
             //actionable message instead of failing later with a confusing error.
             DotNetRuntimeChecker.EnsureCorrectRuntimeOrExit();
 
-            Option<DirectoryInfo> dataDirectoryOption = new("--data-directory", ["-d"])
-            {
-                Description = "The location to store the server runtime data",
-                DefaultValueFactory = parseResult => new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory)
-            };
-
-            dataDirectoryOption.AcceptExistingOnly();
-
-            RootCommand rootCommand = new("Luna Multiplayer Server");
-            rootCommand.Options.Add(dataDirectoryOption);
-
-            rootCommand.SetAction((parseResult, cancellationToken) =>
-            {
-                ServerContext.DataDirectory = parseResult.GetValue(dataDirectoryOption).FullName;
-                return RunServer(cancellationToken);
-            });
-
-            return rootCommand.Parse(args).InvokeAsync(new InvocationConfiguration {ProcessTerminationTimeout = null}, CancellationTokenSrc.Token);
-        }
-
-        private static async Task RunServer(CancellationToken cancellationToken)
-        {
             try
             {
                 // Force culture to en-US to avoid 'System.Net.Sockets.resources' assembly load error.
@@ -110,7 +94,6 @@ namespace Server
                 ServerContext.Day = LunaNetworkTime.Now.Day;
 
                 LunaLog.Normal($"Luna Server version: {LmpVersioning.CurrentVersion} ({AppContext.BaseDirectory})");
-                LunaLog.Normal($"Server Data Directory: {ServerContext.DataDirectory}");
 
                 Universe.CheckUniverse();
                 LoadSettingsAndGroups();
@@ -130,23 +113,30 @@ namespace Server
                 WebServer.StartWebServer();
 
                 //Do not add the command handler thread to the TaskContainer as it's a blocking task
-                _ = LongRunTaskFactory.StartNew(CommandHandler.ThreadMainAsync, cancellationToken);
+                _ = LongRunTaskFactory.StartNew(CommandHandler.ThreadMainAsync, CancellationTokenSrc.Token);
 
-                TaskContainer.Add(LongRunTaskFactory.StartNew(WebServer.RefreshWebServerInformationAsync, cancellationToken));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(WebServer.RefreshWebServerInformationAsync, CancellationTokenSrc.Token));
 
-                TaskContainer.Add(LongRunTaskFactory.StartNew(LmpPortMapper.RefreshUpnpPortAsync, cancellationToken));
-                TaskContainer.Add(LongRunTaskFactory.StartNew(LogThread.RunLogThreadAsync, cancellationToken));
-                TaskContainer.Add(LongRunTaskFactory.StartNew(ClientMainThread.ThreadMainAsync, cancellationToken));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(LmpPortMapper.RefreshUpnpPortAsync, CancellationTokenSrc.Token));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(LogThread.RunLogThreadAsync, CancellationTokenSrc.Token));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(ClientMainThread.ThreadMainAsync, CancellationTokenSrc.Token));
 
-                TaskContainer.Add(LongRunTaskFactory.StartNew(() => BackupSystem.PerformBackupsAsync(cancellationToken), cancellationToken));
-                TaskContainer.Add(LongRunTaskFactory.StartNew(LidgrenServer.StartReceivingMessagesAsync, cancellationToken));
-                TaskContainer.Add(LongRunTaskFactory.StartNew(LidgrenMasterServer.RegisterWithMasterServerAsync, cancellationToken));
-                TaskContainer.Add(LongRunTaskFactory.StartNew(LidgrenMasterServer.CheckNATTypeAsync, cancellationToken));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(() => BackupSystem.PerformBackupsAsync(CancellationTokenSrc.Token), CancellationTokenSrc.Token));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(LidgrenServer.StartReceivingMessagesAsync, CancellationTokenSrc.Token));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(LidgrenMasterServer.RegisterWithMasterServerAsync, CancellationTokenSrc.Token));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(LidgrenMasterServer.CheckNATTypeAsync, CancellationTokenSrc.Token));
 
-                TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.RefreshLatestVersionAsync, cancellationToken));
-                TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.DisplayNewVersionMsgAsync, cancellationToken));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.RefreshLatestVersionAsync, CancellationTokenSrc.Token));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(VersionChecker.DisplayNewVersionMsgAsync, CancellationTokenSrc.Token));
 
-                TaskContainer.Add(LongRunTaskFactory.StartNew(() => GcSystem.PerformGarbageCollectionAsync(cancellationToken), cancellationToken));
+                TaskContainer.Add(LongRunTaskFactory.StartNew(() => GcSystem.PerformGarbageCollectionAsync(CancellationTokenSrc.Token), CancellationTokenSrc.Token));
+
+                if (memoryDiagnosticsEnabled)
+                {
+                    LunaLog.Normal("Memory diagnostics enabled (--memorydiag). [MemDiag] lines will be written to the log.");
+                    TaskContainer.Add(LongRunTaskFactory.StartNew(() => MemoryDiagnosticsLogger.LogMemoryDiagnostics(CancellationTokenSrc.Token), CancellationTokenSrc.Token));
+                }
+
                 while (ServerContext.ServerStarting)
                     Thread.Sleep(500);
 
@@ -202,6 +192,22 @@ namespace Server
         /// Return the number of running instances.
         /// </summary>
         private static int GetRunningInstances() => Process.GetProcessesByName("LunaServer.exe").Length;
+
+        /// <summary>
+        /// Case-insensitive check for a single command-line flag. Kept tiny on purpose: the
+        /// server has historically had no CLI surface and we don't want to grow one accidentally.
+        /// If we ever need more than two or three flags, swap this for a dedicated parser.
+        /// </summary>
+        private static bool HasFlag(string[] args, string flag)
+        {
+            if (args == null) return false;
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (string.Equals(args[i], flag, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
 
         /// <summary>
         /// Runs the exit logic
