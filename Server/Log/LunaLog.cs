@@ -1,6 +1,10 @@
 ﻿using LmpCommon;
 using LmpCommon.Enums;
+<<<<<<< HEAD
 using Server.Events;
+=======
+using Server.Context;
+>>>>>>> upstream/master
 using Server.Settings.Structures;
 using Server.System;
 using System;
@@ -32,7 +36,17 @@ namespace Server.Log
     {
         private static readonly BaseLogger Singleton = new LunaLog();
 
+<<<<<<< HEAD
         public static string LogFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+=======
+        static LunaLog()
+        {
+            if (!FileHandler.FolderExists(LogFolder))
+                FileHandler.FolderCreate(LogFolder);
+        }
+
+        public static string LogFolder = Path.Combine(ServerContext.DataDirectory, "logs");
+>>>>>>> upstream/master
 
         /// <summary>
         /// Serializes all access to <see cref="_writer"/>, <see cref="_currentPath"/>, and the
