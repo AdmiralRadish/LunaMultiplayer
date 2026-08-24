@@ -76,6 +76,7 @@ namespace LmpClient.Systems.VesselPositionSys
 
             WarpEvent.onTimeWarpStopped.Add(PositionEvents.WarpStopped);
             GameEvents.onVesselSwitching.Add(PositionEvents.OnVesselSwitching);
+            GameEvents.onVesselGoOffRails.Add(PositionEvents.VesselGoOffRails);
         }
 
         protected override void OnDisabled()
@@ -86,8 +87,10 @@ namespace LmpClient.Systems.VesselPositionSys
             TimingManager.LateUpdateRemove(SendPositionsStage, SendVesselPositionUpdates);
 
             GameEvents.onVesselSwitching.Remove(PositionEvents.OnVesselSwitching);
+            GameEvents.onVesselGoOffRails.Remove(PositionEvents.VesselGoOffRails);
             CurrentVesselUpdate.Clear();
             TargetVesselUpdateQueue.Clear();
+            CanonicalOrbitTracker.Clear();
         }
 
         private void HandleVesselUpdates()
@@ -205,6 +208,7 @@ namespace LmpClient.Systems.VesselPositionSys
         {
             CurrentVesselUpdate.TryRemove(vesselId, out _);
             TargetVesselUpdateQueue.TryRemove(vesselId, out _);
+            CanonicalOrbitTracker.Remove(vesselId);
         }
 
         /// <summary>

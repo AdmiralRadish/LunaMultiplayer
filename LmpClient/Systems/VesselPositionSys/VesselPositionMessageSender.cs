@@ -89,14 +89,11 @@ namespace LmpClient.Systems.VesselPositionSys
 
         private static void SetOrbit(Vessel vessel, VesselPositionMsgData msgData)
         {
-            msgData.Orbit[0] = vessel.orbit.inclination;
-            msgData.Orbit[1] = vessel.orbit.eccentricity;
-            msgData.Orbit[2] = vessel.orbit.semiMajorAxis;
-            msgData.Orbit[3] = vessel.orbit.LAN;
-            msgData.Orbit[4] = vessel.orbit.argumentOfPeriapsis;
-            msgData.Orbit[5] = vessel.orbit.meanAnomalyAtEpoch;
-            msgData.Orbit[6] = vessel.orbit.epoch;
-            msgData.Orbit[7] = vessel.orbit.referenceBody.flightGlobalsIndex;
+            //Stream held canonical elements instead of vessel.orbit's per-frame state-vector
+            //re-derivation, so physics noise is not persisted server-side (vessel drift fix)
+            var elements = CanonicalOrbitTracker.GetElementsToSend(vessel);
+            for (var i = 0; i < 8; i++)
+                msgData.Orbit[i] = elements[i];
         }
 
         private static void SetVelocityVector(Vessel vessel, VesselPositionMsgData msgData)

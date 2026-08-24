@@ -29,5 +29,17 @@ namespace LmpClient.Systems.VesselPositionSys
 
             System.MessageSender.SendVesselPositionUpdate(toVessel, doOrbitDriverReadyCheck: true);
         }
+
+        /// <summary>
+        /// Snapshot the pristine conic elements the moment a vessel goes off rails, before the
+        /// per-frame state-vector re-derivation starts injecting physics noise into vessel.orbit
+        /// </summary>
+        public void VesselGoOffRails(Vessel vessel)
+        {
+            if (!System.Enabled || vessel == null)
+                return;
+
+            CanonicalOrbitTracker.SeedFromVessel(vessel);
+        }
     }
 }
