@@ -459,6 +459,7 @@
     <Compile Include="VesselUtilities\DiscoveryInfoSanitizer.cs" />
     <Compile Include="VesselUtilities\DockingPortUtil.cs" />
     <Compile Include="VesselUtilities\OwnVesselReloader.cs" />
+    <Compile Include="VesselUtilities\RoboticControllerGuard.cs" />
     <Compile Include="VesselUtilities\VesselSerializer.cs" />
     <Compile Include="Systems\VesselSwitcherSys\VesselSwitcherSystem.cs" />
     <Compile Include="Windows\Admin\AdminDrawer.cs" />

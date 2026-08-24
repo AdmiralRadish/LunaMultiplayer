@@ -68,6 +68,9 @@ namespace LmpClient.VesselUtilities
                 //offending values itself.
                 DiscoveryInfoSanitizer.SanitizeVesselNode(inputNode, protoVesselId, "wire-input");
 
+                //Restore any KAL-1000 track data that arrived wiped (see RoboticControllerGuard)
+                RoboticControllerGuard.ProcessVesselNode(inputNode, protoVesselId, "wire-input");
+
                 //Cannot reuse the Protovessel to save memory garbage as it does not have any clear method :(
                 return new ProtoVessel(inputNode, HighLogic.CurrentGame);
             }
@@ -101,6 +104,9 @@ namespace LmpClient.VesselUtilities
             }
 
             var vesselId = new Guid(configNode.GetValue("pid"));
+
+            //Cache populated KAL-1000 data / restore it if BackupVessel just wiped it
+            RoboticControllerGuard.ProcessVesselNode(configNode, vesselId, "outgoing");
 
             //Defend against NaN orbits
             if (configNode.VesselHasNaNPosition())
