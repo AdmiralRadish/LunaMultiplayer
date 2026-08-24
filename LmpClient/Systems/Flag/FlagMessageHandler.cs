@@ -26,7 +26,8 @@ namespace LmpClient.Systems.Flag
                             var extendedFlagInfo = new ExtendedFlagInfo(data.FlagFiles[i]);
                             System.ServerFlags.TryAdd(extendedFlagInfo.FlagName, extendedFlagInfo);
                         }
-                        MainSystem.NetworkState = ClientState.FlagsSynced;
+                        if (MainSystem.NetworkState < ClientState.FlagsSynced)
+                            MainSystem.NetworkState = ClientState.FlagsSynced;
                     }
                     break;
                 case FlagMessageType.FlagData:
