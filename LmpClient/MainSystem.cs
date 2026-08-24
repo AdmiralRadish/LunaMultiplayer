@@ -81,6 +81,13 @@ namespace LmpClient
         #region Heartbeat
 
         /// <summary>
+        /// Master toggle for the per-second [LMP][HEARTBEAT] log line. Off by
+        /// default now that the warm-up stall investigation is done; flip to
+        /// true to re-enable the diagnostic without touching the call sites.
+        /// </summary>
+        private const bool HeartbeatLogEnabled = false;
+
+        /// <summary>
         /// Wall-clock time (<see cref="Time.realtimeSinceStartup"/>) of the
         /// most recent heartbeat emission. Throttles the log to roughly one
         /// line per second so an idle session doesn't fill KSP.log with
@@ -124,10 +131,13 @@ namespace LmpClient
             try { vesselCount = FlightGlobals.Vessels?.Count ?? 0; }
             catch { vesselCount = -1; }
 
-            LunaLog.Log(
-                $"[LMP][HEARTBEAT] tick t={Time.timeSinceLevelLoad:F1}s " +
-                $"scene={HighLogic.LoadedScene} vessels={vesselCount} " +
-                $"frame={Time.frameCount} dt={Time.unscaledDeltaTime:F2}s");
+            if (HeartbeatLogEnabled)
+            {
+                LunaLog.Log(
+                    $"[LMP][HEARTBEAT] tick t={Time.timeSinceLevelLoad:F1}s " +
+                    $"scene={HighLogic.LoadedScene} vessels={vesselCount} " +
+                    $"frame={Time.frameCount} dt={Time.unscaledDeltaTime:F2}s");
+            }
 
             var tsProfile = TsLoadProfiler.FlushSnapshotOrNull();
             if (tsProfile != null) LunaLog.Log(tsProfile);
